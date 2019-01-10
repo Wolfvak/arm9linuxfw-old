@@ -3,39 +3,35 @@
 #include <common.h>
 #include <hw/pxi.h>
 
-enum {
-	DRV_OK = 0,
-	DRV_IO_ERROR,
-	DRV_TOO_MANY,
-	DRV_NOT_FOUND,
-	DRV_BAD_MEMORY,
-};
+#define PXI_COMMAND_ARG_GET(cmd, argn, type)	((type)((cmd)->args[argn]))
+#define PXI_COMMAND_ARG_SET(cmd, argn, value)	((cmd)->args[argn] = (u32)(value))
 
 typedef struct {
-	u32 dev;
-	u32 cmd;
-	int state;
-	u32 args[5];
-} __attribute__((packed)) pxi_cmd;
+	u8 dev;
+	u8 function;
 
-typedef struct pxicmd_drv pxicmd_drv;
+	s8 state;
+	s8 argc;
+	u32 args[0];
+} __attribute__((packed)) pxi_command;
 
-typedef struct pxidrv_fns {
-	u32 func_id;
-	int (*func_ptr)(pxi_cmd *cmd, pxicmd_drv *drv);
-} pxidrv_fns;
+typedef struct pxi_device pxi_device;
 
-typedef struct pxicmd_drv {
-	u32 id;
-	u32 fn_cnt;
-	pxidrv_fns *fns;
-	void *priv;
-} pxicmd_drv;
+typedef struct pxi_device_function {
+	/* function name */
+	const char *name;
 
-int pxicmd_install_drv(pxicmd_drv *drv);
-int pxicmd_run_drv(pxi_cmd *cmd);
+	/* function entrypoint */
+	int (*pxi_cb)(pxi_command *cmd, const pxi_device *dev);
+} pxi_device_function;
 
-static inline void
-pxicmd_reply(pxi_cmd *cmd) {
-	pxi_send((u32)cmd);
-}
+typedef struct pxi_device {
+	/* device name */
+	const char *name;
+
+	/* array of device operations & count */
+	const pxi_device_function *functions;
+	int fn_count;
+} pxi_device;
+
+int pxicmd_install_drv(const pxi_device *drv);

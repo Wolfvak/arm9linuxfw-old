@@ -1,7 +1,8 @@
 #include <common.h>
 #include <hw/pxi.h>
 
-void pxi_reset(void)
+void
+pxi_reset(void)
 {
     // disable SYNC interrupt
     REG_PXI_SYNC_CNT = 0;
@@ -15,12 +16,11 @@ void pxi_reset(void)
 
     // reset PXI
     REG_PXI_CNT = 0;
-    REG_PXI_CNT = PXI_FIFO_ERROR_ACK | PXI_FIFO_ENABLE;
 
     // enable SYNC and RECV NOT EMPTY interrupts by default
-    REG_PXI_CNT |= PXI_RECV_FIFO_NEMPTY_IRQ;
-
+    REG_PXI_CNT = PXI_RECV_FIFO_NEMPTY_IRQ | PXI_FIFO_ENABLE;
     REG_PXI_SYNC_CNT = PXI_SYNC_IRQ_ENABLE;
+
     REG_PXI_SYNC_SEND = 0;
     return;
 }

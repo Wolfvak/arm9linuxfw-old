@@ -1,6 +1,5 @@
 #include <asm.h>
 #include <arm/cpu.h>
-#include <interrupt.h>
 .align 2
 
 #define IRQ_STACK_SIZE (1024)
@@ -41,12 +40,17 @@ __start:
     NOP_SLED 2
 
 
+    @ Relocate vectors
+    ldr r0, =__vector_lma
+    ldr r1, =__vector_s
+    ldr r2, =__vector_e
+    bl BootstrapReloc
+
     @ Relocate executable
     ldr r0, =__text_lma
     ldr r1, =__text_s
     ldr r2, =__text_e
     bl BootstrapReloc
-
 
     @ Relocate data & rodata
     ldr r0, =__data_lma
@@ -92,14 +96,9 @@ ASM_FUNCTION start_itcm
     ldr sp, =(sys_stack + SYS_STACK_SIZE)
 
 
-    @ Reset devices
-    bl irq_reset
-    bl NDMA_Reset
-
-
     @ MPU Regions:
     @ N | Name    | Start      | End        | Data  | Inst  | IC | DC | DB
-    @ 0 | ITCM    | 0x00000000 | 0x07FFFFFF | RW_NA | RO_NA | n  | n  | n
+    @ 0 | ITCM    | 0x01FF8000 | 0x07FFFFFF | RW_NA | RO_NA | n  | n  | n
     @ 1 | AHBRAM  | 0x08000000 | 0x08FFFFFF | RW_NA | RO_NA | y  | y  | y
     @ 2 | MMIO    | 0x10000000 | 0x101FFFFF | RW_NA | NA_NA | n  | n  | n
     @ 3 | VRAM    | 0x18000000 | 0x187FFFFF | RW_NA | NA_NA | n  | n  | n
@@ -134,12 +133,10 @@ ASM_FUNCTION start_itcm
     mcr p15, 0, r7, c6, c7, 0
 
 
-    @ Enable MPU and caches, use low vectors
-    ldr r1, =0x1005
-    ldr r2, =0x2000
+    @ Enable MPU and caches, use high vectors
+    ldr r1, =0x3005
     mrc p15, 0, r0, c1, c0, 0
     orr r0, r0, r1
-    bic r0, r0, r2
     mcr p15, 0, r0, c1, c0, 0
     NOP_SLED 2
 
@@ -151,17 +148,6 @@ ASM_FUNCTION start_itcm
     orr r1, r1, #0x200
     strh r1, [r0, #0x20]
 
-
-    @ PXI Setup
-    mov r0, #IRQ_PXI_RECV_NOT_EMPTY
-    ldr r1, =pxicmd_handler
-    bl irq_register
-
-    mov r0, #IRQ_PXI_SYNC
-    ldr r1, =pxisync_handler
-    bl irq_register
-
-    bl pxi_reset
 
     @ Branch to C code
     ldr r12, =pxicmd_mainloop
@@ -180,7 +166,7 @@ sys_stack:
 .section .rodata.mpu_regions
 .global mpu_regions
 mpu_regions:
-    .word 0x00000035 @ ITCM
+    .word 0x01FF8035 @ ITCM
     .word 0x08000027 @ AHBRAM
     .word 0x10000029 @ MMIO
     .word 0x1800002D @ VRAM

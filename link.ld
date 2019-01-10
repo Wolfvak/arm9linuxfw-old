@@ -5,7 +5,8 @@ ENTRY(__start)
 MEMORY
 {
   AHBRAM  (RWX) : ORIGIN = 0x08080000, LENGTH = 512K
-  ITCM    (RWX) : ORIGIN = 0x00000000, LENGTH = 32K
+  VECTOR  (RWX) : ORIGIN = 0x08000000, LENGTH = 64
+  ITCM    (RWX) : ORIGIN = 0x01FF8000, LENGTH = 32K
   DTCM    (RW)  : ORIGIN = 0x40000000, LENGTH = 16K
 }
 
@@ -16,6 +17,15 @@ SECTIONS
         KEEP(*(.bootstrap))
         . = ALIGN(16);
     } >AHBRAM
+
+    .vector : ALIGN(16)
+    {
+        __vector_lma = LOADADDR(.vector);
+        __vector_s = ABSOLUTE(.);
+        KEEP(*(.vector))
+        . = ALIGN(16);
+        __vector_e = ABSOLUTE(.);
+    } >VECTOR AT>AHBRAM
 
     .text : ALIGN(16)
     {

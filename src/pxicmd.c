@@ -1,96 +1,129 @@
 #include <common.h>
-
-#include <arm/cpu.h>
-#include <hw/pxi.h>
+#include <interrupt.h>
+#include <ringbuffer.h>
 #include <pxicmd.h>
 
-#include <ringbuffer.h>
+#include <arm/cpu.h>
+#include <hw/irq.h>
+#include <hw/pxi.h>
+
+#include <hw/prng.h>
+#include <hw/sdmmc.h>
 
 #define PXICMD_MAX_DRV 8
 
-static pxicmd_drv *drivers[PXICMD_MAX_DRV];
-static u32 driver_count = 0;
+static u8 ctr = 0xFF;
+
+static const pxi_device *drivers[PXICMD_MAX_DRV];
+static int driver_count = 0;
+
+int sdmmc_register_driver(void);
 
 DEFINE_RINGBUFFER(pxicmd_jobs, 32);
 
-static inline pxicmd_drv *
-pxicmd_find_drv(u32 dev) {
-    for (u32 i = 0; i < driver_count; i++) {
-        if (dev == drivers[i]->id)
-            return drivers[i];
-    }
-    return NULL;
-}
-
-static inline pxidrv_fns *
-pxicmd_find_fn(u32 cmd, pxicmd_drv *drv) {
-    for (u32 i = 0; i < drv->fn_cnt; i++) {
-        if (cmd == drv->fns[i].func_id)
-            return &drv->fns[i];
-    }
-    return NULL;
-}
-
-int
-pxicmd_install_drv(pxicmd_drv *drv)
+static int
+pxicmd_run_drv(pxi_command *cmd)
 {
-    int ret;
-    if (driver_count == PXICMD_MAX_DRV)
-        return -DRV_TOO_MANY;
+    const pxi_device *drv;
+    const pxi_device_function *func;
 
-    ret = driver_count;
-    drivers[driver_count++] = drv;
-    return ret;
+    if (cmd->dev < driver_count)
+        drv = drivers[cmd->dev];
+    else
+        return -1;
+
+    if (cmd->function < drv->fn_count)
+        func = &drv->functions[cmd->function];
+    else
+        return -1;
+
+    return (func->pxi_cb)(cmd, drv);
 }
 
-int
-pxicmd_run_drv(pxi_cmd *cmd)
+static int
+pxicmd_handler(u32 unused)
 {
-    pxicmd_drv *drv;
-    pxidrv_fns *func;
+    /*
+     * takes any incoming commands and puts them on a job ringbuffer
+     *
+     * interrupt handlers run with interrupts disabled, so there's
+     * no need to enter a critical section to access the ring buffer
+     */
+    while(!pxi_recvfifoempty()) {
+        pxi_command *cmd = (pxi_command*)pxi_recv();
 
-    drv = pxicmd_find_drv(cmd->dev);
-
-    if (drv == NULL)
-        return -DRV_NOT_FOUND;
-
-    func = pxicmd_find_fn(cmd->cmd, drv);
-    return (func->func_ptr)(cmd, drv);
-}
-
-int
-pxicmd_handler(u32 irqn)
-{
-    pxi_cmd *cmd;
-
-    while((cmd = (pxi_cmd*)pxi_recv())) {
         if (ringbuffer_full(&pxicmd_jobs)) {
-            cmd->state = -DRV_TOO_MANY;
-            pxicmd_reply(cmd);
+            /* not enough space in the ringbuffer */
+            cmd->state = -1;
         } else {
+            /* put the job in the ringbuffer */
+            cmd->state = 0;
             ringbuffer_store(&pxicmd_jobs, cmd);
         }
+
+        /* send ack, if state < 0 then it should be retried */
+        pxi_send((u32)cmd);
     }
-    return 0;
+    return IRQ_HANDLED;
 }
 
-int
-pxisync_handler(u32 irqn)
+static int
+pxisync_handler(u32 unused)
 {
+    /*
+     * a simple SYNC handler
+     * just reply the bitwise negation
+     * and send back a SYNC11 interrupt
+     */
     pxi_sendsync(~pxi_recvsync());
     pxi_trigger_sync11();
-    return 0;
+    return IRQ_HANDLED;
+}
+
+static void __attribute__((unused))
+pxicmd_dumpdrivers(char *out)
+{
+    /* blindly assume the buffer is big enough */
+    for (int i = 0; i < driver_count; i++) {
+        const pxi_device *drv = drivers[i];
+        strcat(out, drv->name);
+        strcat(out, ":");
+
+        for (int j = 0; j < drv->fn_count; j++) {
+            const pxi_device_function *fn = &drv->functions[j];
+            strcat(out, fn->name);
+            strcat(out, ",");
+        }
+        strcat(out, "\n");
+    }
 }
 
 void
 pxicmd_mainloop(void)
 {
+    /* reset hardware stuff */
+    irq_reset();
+    pxi_reset();
+
+    /* register interrupt calls */
+    irq_register(IRQ_PXI_RECV_NOT_EMPTY, pxicmd_handler);
+    irq_register(IRQ_PXI_SYNC, pxisync_handler);
+
+    /* register all drivers */
+    prng_register_driver();
+    sdmmc_register_driver();
+
+    /* make sure all memory is sane */
+    ringbuffer_clear(&pxicmd_jobs);
+
+    /* enable interrupts, wait for incoming commands */
     enable_interrupts();
+
     while(1) {
         wait_for_interrupt();
 
         while(1) {
-            pxi_cmd *cmd = NULL;
+            pxi_command *cmd = NULL;
             irqsave_status status;
 
             status = enter_critical_section();
@@ -100,10 +133,24 @@ pxicmd_mainloop(void)
             leave_critical_section(status);
 
             if (cmd) {
-                pxicmd_run_drv(cmd);
+                cmd->state = pxicmd_run_drv(cmd);
+                pxi_send((u32)cmd);
             } else {
                 break;
             }
         }
     }
+}
+
+
+int
+pxicmd_install_drv(const pxi_device *drv)
+{
+    int ret;
+    if (driver_count == PXICMD_MAX_DRV)
+        return -1;
+
+    ret = driver_count;
+    drivers[driver_count++] = drv;
+    return ret;
 }

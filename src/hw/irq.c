@@ -25,13 +25,15 @@ void __attribute__((interrupt("irq")))
 irq_handler(void)
 {
     int pend;
-    irqsave_status irq_status = enter_critical_section();
     while((pend = irq_pending()) >= 0) {
-        int res = (interrupts[pend])(pend);
-        if (res == 0)
+        if (interrupts[pend] != NULL) {
+            int res = (interrupts[pend])(pend);
+            if (res == IRQ_HANDLED)
+                irq_ack(pend);
+        } else {
             irq_ack(pend);
+        }
     }
-    leave_critical_section(irq_status);
 }
 
 void irq_reset(void)
