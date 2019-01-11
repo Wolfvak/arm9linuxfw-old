@@ -1,4 +1,5 @@
 #include <asm.h>
+#include <arm/cpu.h>
 .align 2
 .arm
 
@@ -44,11 +45,11 @@ fiq_handler:
     TRAP_ENTRY 4
 
 _exception_fatal:
-    ldr sp, =(_fatal_stk - 18*4)
+    ldr sp, =(abort_stack - 18*4)
     stmia sp, {r0-r7}               @ store the non-banked GPRs
 
     mrs r1, cpsr
-    orr r0, r1, #0xC0
+    orr r0, r1, #SR_NOINT
     msr cpsr_c, r0                  @ disable interrupts
 
     lsr r0, r1, #29                 @ r0 = fatal exception source
@@ -56,16 +57,17 @@ _exception_fatal:
     mrs r2, spsr
     str r2, [sp, #16*4]             @ store exception PSR
 
-    ands r2, r2, #0xF
-    orreq r2, r2, #0xF              @ if the abort happened in USR
+    ands r2, r2, #SR_PMODE_MASK
+    orreq r2, r2, #SR_SYS           @ if the abort happened in USR
                                     @ switch to SYS instead
 
-    orr r2, r2, #0xD0               @ with interrupts disabled
+    orr r2, r2, #(0x10 | SR_NOINT)  @ with interrupts disabled
     add r3, sp, #8*4
     msr cpsr_c, r2
     nop
     stmia r3, {r8-r14}              @ store remaining prev mode registers
                                     @ including banked FIQ if needed
+    nop
     msr cpsr_c, r1                  @ and return back to the exception mode
     nop
 
@@ -80,6 +82,6 @@ _exception_fatal:
 
 
 .align 3
-_fatal_stack_bottom:
-    .space (512 * 4)
-_fatal_stk:
+.section .bss.stacks
+    .space (64 * 4)
+abort_stack:

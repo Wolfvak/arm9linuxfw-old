@@ -2,8 +2,8 @@
 #include <arm/cpu.h>
 .align 2
 
-#define IRQ_STACK_SIZE (1024)
-#define SYS_STACK_SIZE (4096)
+#define IRQ_STACK_SIZE (256)
+#define SYS_STACK_SIZE (8192)
 
 .section .bootstrap, "ax"
 .global __start

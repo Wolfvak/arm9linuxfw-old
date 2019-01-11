@@ -3,7 +3,8 @@
 
 static const u8 bug_font[];
 
-static int bug_draw_str(u8 *fb, int x, int y, const char *str)
+static int
+bug_draw_str(u8 *fb, int x, int y, const char *str)
 {
     u8 *px;
     int mask, row, xpos = x;
@@ -49,7 +50,8 @@ static int bug_draw_str(u8 *fb, int x, int y, const char *str)
 
 
 static const char bug_draw_int_lut[] = "0123456789ABCDEF";
-static void bug_draw_int(u8 *fb, int x, int y, u32 h)
+static void
+bug_draw_int(u8 *fb, int x, int y, u32 h)
 {
     char hexstr[9];
     hexstr[8] = 0;
@@ -61,7 +63,8 @@ static void bug_draw_int(u8 *fb, int x, int y, u32 h)
     bug_draw_str(fb, x, y, hexstr);
 }
 
-void handle_fatal_error(int src, u32 *regs)
+void
+handle_fatal_error(int src, u32 *regs)
 {
     u8 *fb = (u8*)0x18000000;
     int y;
@@ -72,6 +75,9 @@ void handle_fatal_error(int src, u32 *regs)
 
         bug_draw_str(fb, 8, 8, "BUG!");
         y = 16;
+
+        bug_draw_int(fb, 8, y, src);
+        y += 8;
 
         for (int i = 0; i < 17; i++) {
             bug_draw_int(fb, 8, y, regs[i]);

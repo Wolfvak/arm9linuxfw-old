@@ -10,16 +10,15 @@
 #include <hw/prng.h>
 #include <hw/sdmmc.h>
 
-#define PXICMD_MAX_DRV 8
-
-static u8 ctr = 0xFF;
+#define PXICMD_MAX_DRV  4
+#define PXICMD_MAX_JOBS 64
 
 static const pxi_device *drivers[PXICMD_MAX_DRV];
 static int driver_count = 0;
 
 int sdmmc_register_driver(void);
 
-DEFINE_RINGBUFFER(pxicmd_jobs, 32);
+DECLARE_RINGBUFFER(pxicmd_jobs, PXICMD_MAX_JOBS);
 
 static int
 pxicmd_run_drv(pxi_command *cmd)
@@ -52,16 +51,16 @@ pxicmd_handler(u32 unused)
     while(!pxi_recvfifoempty()) {
         pxi_command *cmd = (pxi_command*)pxi_recv();
 
-        if (ringbuffer_full(&pxicmd_jobs)) {
+        if (ringbuffer_full(pxicmd_jobs)) {
             /* not enough space in the ringbuffer */
             cmd->state = -1;
         } else {
             /* put the job in the ringbuffer */
             cmd->state = 0;
-            ringbuffer_store(&pxicmd_jobs, cmd);
+            ringbuffer_store(pxicmd_jobs, cmd);
         }
 
-        /* send ack, if state < 0 then it should be retried */
+        /* send ack, if state < 0 then it should be retried by the client */
         pxi_send((u32)cmd);
     }
     return IRQ_HANDLED;
@@ -80,7 +79,7 @@ pxisync_handler(u32 unused)
     return IRQ_HANDLED;
 }
 
-static void __attribute__((unused))
+static void
 pxicmd_dumpdrivers(char *out)
 {
     /* blindly assume the buffer is big enough */
@@ -98,6 +97,28 @@ pxicmd_dumpdrivers(char *out)
     }
 }
 
+static int
+sys_list(pxi_command *cmd, const pxi_device *drv)
+{
+    char *out = PXI_COMMAND_ARG_GET(cmd, 0, char*);
+    pxicmd_dumpdrivers(out);
+    return 0;
+}
+
+static const pxi_device_function sys_ops[] = {
+    {
+        .name = "list",
+        .pxi_cb = sys_list,
+    }
+};
+
+static const pxi_device sys_drv = {
+    .name = "sys",
+
+    .functions = sys_ops,
+    .fn_count = ARRAY_SIZE(sys_ops)
+};
+
 void
 pxicmd_mainloop(void)
 {
@@ -110,11 +131,12 @@ pxicmd_mainloop(void)
     irq_register(IRQ_PXI_SYNC, pxisync_handler);
 
     /* register all drivers */
-    prng_register_driver();
+    pxicmd_install_drv(&sys_drv);
+    //prng_register_driver();
     sdmmc_register_driver();
 
     /* make sure all memory is sane */
-    ringbuffer_clear(&pxicmd_jobs);
+    ringbuffer_init(pxicmd_jobs, PXICMD_MAX_JOBS);
 
     /* enable interrupts, wait for incoming commands */
     enable_interrupts();
@@ -127,8 +149,8 @@ pxicmd_mainloop(void)
             irqsave_status status;
 
             status = enter_critical_section();
-            if (!ringbuffer_empty(&pxicmd_jobs)) {
-                cmd = ringbuffer_fetch(&pxicmd_jobs);
+            if (!ringbuffer_empty(pxicmd_jobs)) {
+                cmd = ringbuffer_fetch(pxicmd_jobs);
             }
             leave_critical_section(status);
 

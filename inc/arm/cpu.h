@@ -13,6 +13,8 @@
 #define SR_UND (0x1B)
 #define SR_SYS (0x1F)
 
+#define SR_PMODE_MASK   (0xF)
+
 #define SR_THUMB (1 << 5)
 #define SR_NOFIQ (1 << 6)
 #define SR_NOIRQ (1 << 7)

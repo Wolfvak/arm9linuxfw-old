@@ -481,14 +481,20 @@ pxi_mmc_nand_read(pxi_command *cmd, const pxi_device *drv)
 static int
 pxi_mmc_nand_write(pxi_command *cmd, const pxi_device *drv)
 {
-    u32 offset, count;
+    /*
+     * too dangerous, I'll just let it
+     * believe there was a successful write
+     */
+
+    /*u32 offset, count;
     u8 *in;
 
     offset = PXI_COMMAND_ARG_GET(cmd, 0, u32);
     count = PXI_COMMAND_ARG_GET(cmd, 1, u32);
     in = PXI_COMMAND_ARG_GET(cmd, 2, u8*);
 
-    return sdmmc_writesectors(&handleNAND, offset, count, in);
+    return sdmmc_writesectors(&handleNAND, offset, count, in);*/
+    return 0;
 }
 
 static int
