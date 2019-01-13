@@ -56,12 +56,12 @@ pxicmd_handler(u32 unused)
             cmd->state = -1;
         } else {
             /* put the job in the ringbuffer */
-            cmd->state = 0;
+            cmd->state = 1;
             ringbuffer_store(pxicmd_jobs, cmd);
         }
 
         /* send ack, if state < 0 then it should be retried by the client */
-        pxi_send((u32)cmd);
+        pxi_send(cmd->ret_val);
     }
     return IRQ_HANDLED;
 }
@@ -155,8 +155,8 @@ pxicmd_mainloop(void)
             leave_critical_section(status);
 
             if (cmd) {
-                cmd->state = pxicmd_run_drv(cmd);
-                pxi_send((u32)cmd);
+                pxicmd_run_drv(cmd);
+                pxi_send(cmd->ret_val);
             } else {
                 break;
             }

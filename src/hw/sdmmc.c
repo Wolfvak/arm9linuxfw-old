@@ -37,8 +37,16 @@ static inline void _wait(u32 cycles)
 
 mmcdevice *getMMCDevice(int drive)
 {
-    if(drive==0) return &handleNAND;
-    return &handleSD;
+    switch(drive) {
+        case 0:
+            return &handleNAND;
+
+        case 1:
+            return &handleSD;
+
+        default:
+            return NULL;
+    }
 }
 
 static int get_error(struct mmcdevice *ctx)
@@ -450,77 +458,76 @@ int SD_Init()
 static int
 pxi_sdmmc_init(pxi_command *cmd, const pxi_device *drv)
 {
-    int res;
     sdmmc_init();
-    res = Nand_Init();
-    res |= SD_Init();
-    return res;
+    Nand_Init();
+    SD_Init();
+    PXI_COMMAND_ARG_SET(cmd, 0, 2);
+    return 0;
 }
 
 static int
 pxi_sdmmc_size(pxi_command *cmd, const pxi_device *drv)
 {
-    PXI_COMMAND_ARG_SET(cmd, 0, handleSD.total_size);
-    PXI_COMMAND_ARG_SET(cmd, 1, handleNAND.total_size);
+    for (int i = 0; i < cmd->argc; i++) {
+        mmcdevice *dev = getMMCDevice(i);
+        PXI_COMMAND_ARG_SET(cmd, i, dev ? dev->total_size : 0);
+    }
     return 0;
 }
 
 static int
-pxi_mmc_nand_read(pxi_command *cmd, const pxi_device *drv)
+pxi_mmc_read(pxi_command *cmd, const pxi_device *drv)
 {
-    u32 offset, count;
+    u32 drive, offset, count, res;
+    mmcdevice *dev;
     u8 *out;
 
-    offset = PXI_COMMAND_ARG_GET(cmd, 0, u32);
-    count = PXI_COMMAND_ARG_GET(cmd, 1, u32);
-    out = PXI_COMMAND_ARG_GET(cmd, 2, u8*);
+    drive = PXI_COMMAND_ARG_GET(cmd, 0, u32);
+    offset = PXI_COMMAND_ARG_GET(cmd, 1, u32);
+    count = PXI_COMMAND_ARG_GET(cmd, 2, u32);
+    out = PXI_COMMAND_ARG_GET(cmd, 3, u8*);
 
-    return sdmmc_readsectors(&handleNAND, offset, count, out);
-}
+    dev = getMMCDevice(drive);
 
-static int
-pxi_mmc_nand_write(pxi_command *cmd, const pxi_device *drv)
-{
-    /*
-     * too dangerous, I'll just let it
-     * believe there was a successful write
-     */
+    if (dev) {
+        res = (sdmmc_readsectors(dev, offset, count, out) == 0) ?
+                count : 0;
+    } else {
+        res = 0;
+    }
 
-    /*u32 offset, count;
-    u8 *in;
-
-    offset = PXI_COMMAND_ARG_GET(cmd, 0, u32);
-    count = PXI_COMMAND_ARG_GET(cmd, 1, u32);
-    in = PXI_COMMAND_ARG_GET(cmd, 2, u8*);
-
-    return sdmmc_writesectors(&handleNAND, offset, count, in);*/
+    PXI_COMMAND_ARG_SET(cmd, 0, res);
     return 0;
 }
 
 static int
-pxi_mmc_sd_read(pxi_command *cmd, const pxi_device *drv)
+pxi_mmc_write(pxi_command *cmd, const pxi_device *drv)
 {
-    u32 offset, count;
-    u8 *out;
+    u32 drive, offset, count, res;
+    mmcdevice *dev;
+    const u8 *in;
 
-    offset = PXI_COMMAND_ARG_GET(cmd, 0, u32);
-    count = PXI_COMMAND_ARG_GET(cmd, 1, u32);
-    out = PXI_COMMAND_ARG_GET(cmd, 2, u8*);
+    drive = PXI_COMMAND_ARG_GET(cmd, 0, u32);
+    offset = PXI_COMMAND_ARG_GET(cmd, 1, u32);
+    count = PXI_COMMAND_ARG_GET(cmd, 2, u32);
+    in = PXI_COMMAND_ARG_GET(cmd, 3, const u8*);
 
-    return sdmmc_readsectors(&handleSD, offset, count, out);
-}
+    dev = getMMCDevice(drive);
 
-static int
-pxi_mmc_sd_write(pxi_command *cmd, const pxi_device *drv)
-{
-    u32 offset, count;
-    u8 *in;
+    if (dev != &handleSD) {
+        PXI_COMMAND_ARG_SET(cmd, 0, count);
+        return 0;
+    }
 
-    offset = PXI_COMMAND_ARG_GET(cmd, 0, u32);
-    count = PXI_COMMAND_ARG_GET(cmd, 1, u32);
-    in = PXI_COMMAND_ARG_GET(cmd, 2, u8*);
+    if (dev) {
+        res = (sdmmc_writesectors(dev, offset, count, in) == 0) ?
+                count : 0;
+    } else {
+        res = 0;
+    }
 
-    return sdmmc_writesectors(&handleSD, offset, count, in);
+    PXI_COMMAND_ARG_SET(cmd, 0, res);
+    return 0;
 }
 
 static const pxi_device_function sdmmc_functions[] = {
@@ -534,21 +541,12 @@ static const pxi_device_function sdmmc_functions[] = {
     },
 
     {
-        .name = "sdread",
-        .pxi_cb = pxi_mmc_sd_read,
+        .name = "read",
+        .pxi_cb = pxi_mmc_read,
     },
     {
-        .name = "sdwrite",
-        .pxi_cb = pxi_mmc_sd_write
-    },
-
-    {
-        .name = "nandread",
-        .pxi_cb = pxi_mmc_nand_read,
-    },
-    {
-        .name = "nandwrite",
-        .pxi_cb = pxi_mmc_nand_write,
+        .name = "write",
+        .pxi_cb = pxi_mmc_write
     },
 };
 
