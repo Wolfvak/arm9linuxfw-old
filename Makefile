@@ -3,12 +3,13 @@ $(error "Please set DEVKITARM in your environment. export DEVKITARM=<path to>dev
 endif
 
 include $(DEVKITARM)/base_tools
+REV	:= $(shell git rev-list HEAD --count)
 
 TARGET  := $(shell basename $(CURDIR))
 
 SOURCE  := src
 BUILD   := bin
-SUBARCH := -mcpu=arm946e-s -mfloat-abi=soft \
+SUBARCH := -mcpu=arm946e-s -mfloat-abi=soft -DFIRMWARE_VERSION=$(REV) \
            -marm -mno-thumb-interwork -ggdb
 
 INCLUDE := -I$(SOURCE) -Iinc

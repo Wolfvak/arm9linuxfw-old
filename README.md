@@ -29,6 +29,7 @@ arm9linuxfw:
 Linux:
 - improvements to the PXI command protocol
 - add proper autodiscovery to the PXI "bus"
+- maybe port PXI to using the mailbox?
 - wireless communications
 - drivers for all of the above
 - GPU (KMS only to start with, of course)

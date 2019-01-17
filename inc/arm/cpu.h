@@ -68,4 +68,6 @@ wait_for_interrupt(void) {
         :: "r"(0) : "memory");
 }
 
+#define ATOMIC_BLOCK for(irqsave_status _s = enter_critical_section(); _s != 0xFF; leave_critical_section(_s), _s = 0xFF)
+
 #endif /* __ASSEMBLER__ */

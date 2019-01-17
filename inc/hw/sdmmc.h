@@ -104,8 +104,8 @@ extern "C" {
 #endif
 
     typedef struct mmcdevice {
-        uint8_t* rData;
-        const uint8_t* tData;
+        uint32_t* rData;
+        const uint32_t* tData;
         uint32_t size;
         uint32_t error;
         uint16_t stat0;
@@ -120,12 +120,7 @@ extern "C" {
         uint32_t res;
     } mmcdevice;
 
-    void sdmmc_init();
-    int sdmmc_sdcard_readsectors(uint32_t sector_no, uint32_t numsectors, uint8_t *out);
-    int sdmmc_get_cid(bool isNand, uint32_t *info);
-
-    mmcdevice *getMMCDevice(int drive);
-    int SD_Init();
+    int sdmmc_register_driver(void);
 
 #ifdef __cplusplus
 };

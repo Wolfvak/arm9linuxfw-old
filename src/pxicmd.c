@@ -10,15 +10,13 @@
 #include <hw/prng.h>
 #include <hw/sdmmc.h>
 
-#define PXICMD_MAX_DRV  4
-#define PXICMD_MAX_JOBS 64
+#define PXICMD_MAX_DRV  8
+#define PXICMD_MAX_JOBS 128
 
 static const pxi_device *drivers[PXICMD_MAX_DRV];
 static int driver_count = 0;
 
-int sdmmc_register_driver(void);
-
-DECLARE_RINGBUFFER(pxicmd_jobs, PXICMD_MAX_JOBS);
+static DECLARE_RINGBUFFER(pxicmd_jobs, PXICMD_MAX_JOBS);
 
 static int
 pxicmd_run_drv(pxi_command *cmd)
@@ -98,6 +96,14 @@ pxicmd_dumpdrivers(char *out)
 }
 
 static int
+sys_version(pxi_command *cmd, const pxi_device *drv)
+{
+    if (cmd->argc > 0)
+        PXI_COMMAND_ARG_SET(cmd, 0, FIRMWARE_VERSION);
+    return 0;
+}
+
+static int
 sys_list(pxi_command *cmd, const pxi_device *drv)
 {
     char *out = PXI_COMMAND_ARG_GET(cmd, 0, char*);
@@ -107,9 +113,13 @@ sys_list(pxi_command *cmd, const pxi_device *drv)
 
 static const pxi_device_function sys_ops[] = {
     {
+        .name = "version",
+        .pxi_cb = sys_version,
+    },
+    {
         .name = "list",
         .pxi_cb = sys_list,
-    }
+    },
 };
 
 static const pxi_device sys_drv = {
@@ -145,18 +155,16 @@ pxicmd_mainloop(void)
         wait_for_interrupt();
 
         while(1) {
-            pxi_command *cmd = NULL;
-            irqsave_status status;
+            pxi_command *cmd;
 
-            status = enter_critical_section();
-            if (!ringbuffer_empty(pxicmd_jobs)) {
-                cmd = ringbuffer_fetch(pxicmd_jobs);
+            ATOMIC_BLOCK {
+                cmd = ringbuffer_empty(pxicmd_jobs) ?
+                    NULL : ringbuffer_fetch(pxicmd_jobs);
             }
-            leave_critical_section(status);
 
             if (cmd) {
                 pxicmd_run_drv(cmd);
-                pxi_send(cmd->ret_val);
+                ATOMIC_BLOCK { pxi_send(cmd->ret_val); }
             } else {
                 break;
             }

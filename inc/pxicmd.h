@@ -49,8 +49,9 @@ typedef struct {
 
 	s8 state;
 	s8 argc;
+
 	u32 args[0];
-} __attribute__((packed)) pxi_command;
+} __attribute__((packed)) __attribute__((aligned(4))) pxi_command;
 
 typedef struct pxi_device pxi_device;
 

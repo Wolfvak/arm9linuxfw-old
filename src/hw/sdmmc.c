@@ -94,10 +94,9 @@ static void sdmmc_send_command(struct mmcdevice *ctx, u32 cmd, u32 args)
 
     u32 size = ctx->size;
     const u16 blkSize = sdmmc_read16(REG_SDBLKLEN32);
-    u32 *rDataPtr32 = (u32*)ctx->rData;
-    u8  *rDataPtr8  = ctx->rData;
-    const u32 *tDataPtr32 = (u32*)ctx->tData;
-    const u8  *tDataPtr8  = ctx->tData;
+
+    u32 *rDataPtr32 = ctx->rData;
+    const u32 *tDataPtr32 = ctx->tData;
 
     bool rUseBuf = ( NULL != rDataPtr32 );
     bool tUseBuf = ( NULL != tDataPtr32 );
@@ -116,23 +115,9 @@ static void sdmmc_send_command(struct mmcdevice *ctx, u32 cmd, u32 args)
                     sdmmc_mask16(REG_SDSTATUS1, TMIO_STAT1_RXRDY, 0);
                     if(size >= blkSize)
                     {
-                        if(!((u32)rDataPtr32 & 3))
+                        for(u32 i = 0; i < blkSize; i += 4)
                         {
-                            for(u32 i = 0; i < blkSize; i += 4)
-                            {
-                                *rDataPtr32++ = sdmmc_read32(REG_SDFIFO32);
-                            }
-                        }
-                        else
-                        {
-                            for(u32 i = 0; i < blkSize; i += 4)
-                            {
-                                u32 data = sdmmc_read32(REG_SDFIFO32);
-                                *rDataPtr8++ = data;
-                                *rDataPtr8++ = data >> 8;
-                                *rDataPtr8++ = data >> 16;
-                                *rDataPtr8++ = data >> 24;
-                            }
+                            *rDataPtr32++ = sdmmc_read32(REG_SDFIFO32);
                         }
                         size -= blkSize;
                     }
@@ -150,23 +135,9 @@ static void sdmmc_send_command(struct mmcdevice *ctx, u32 cmd, u32 args)
                     sdmmc_mask16(REG_SDSTATUS1, TMIO_STAT1_TXRQ, 0);
                     if(size >= blkSize)
                     {
-                        if(!((u32)tDataPtr32 & 3))
+                        for(u32 i = 0; i < blkSize; i += 4)
                         {
-                            for(u32 i = 0; i < blkSize; i += 4)
-                            {
-                                sdmmc_write32(REG_SDFIFO32, *tDataPtr32++);
-                            }
-                        }
-                        else
-                        {
-                            for(u32 i = 0; i < blkSize; i += 4)
-                            {
-                                u32 data = *tDataPtr8++;
-                                data |= (u32)*tDataPtr8++ << 8;
-                                data |= (u32)*tDataPtr8++ << 16;
-                                data |= (u32)*tDataPtr8++ << 24;
-                                sdmmc_write32(REG_SDFIFO32, data);
-                            }
+                            sdmmc_write32(REG_SDFIFO32, *tDataPtr32++);
                         }
                         size -= blkSize;
                     }
@@ -211,7 +182,7 @@ static void sdmmc_send_command(struct mmcdevice *ctx, u32 cmd, u32 args)
     }
 }
 
-int sdmmc_readsectors(mmcdevice *dev, u32 sector, u32 count, u8 *out)
+int sdmmc_readsectors(mmcdevice *dev, u32 sector, u32 count, u32 *out)
 {
     if(dev->isSDHC == 0)
         sector <<= 9;
@@ -230,7 +201,7 @@ int sdmmc_readsectors(mmcdevice *dev, u32 sector, u32 count, u8 *out)
     return get_error(dev);
 }
 
-int sdmmc_writesectors(mmcdevice *dev, u32 sector, u32 count, const u8 *in)
+int sdmmc_writesectors(mmcdevice *dev, u32 sector, u32 count, const u32 *in)
 {
     if(dev->isSDHC == 0)
         sector <<= 9;
@@ -480,12 +451,12 @@ pxi_mmc_read(pxi_command *cmd, const pxi_device *drv)
 {
     u32 drive, offset, count, res;
     mmcdevice *dev;
-    u8 *out;
+    u32 *out;
 
     drive = PXI_COMMAND_ARG_GET(cmd, 0, u32);
     offset = PXI_COMMAND_ARG_GET(cmd, 1, u32);
     count = PXI_COMMAND_ARG_GET(cmd, 2, u32);
-    out = PXI_COMMAND_ARG_GET(cmd, 3, u8*);
+    out = PXI_COMMAND_ARG_GET(cmd, 3, u32*);
 
     dev = getMMCDevice(drive);
 
@@ -505,12 +476,12 @@ pxi_mmc_write(pxi_command *cmd, const pxi_device *drv)
 {
     u32 drive, offset, count, res;
     mmcdevice *dev;
-    const u8 *in;
+    const u32 *in;
 
     drive = PXI_COMMAND_ARG_GET(cmd, 0, u32);
     offset = PXI_COMMAND_ARG_GET(cmd, 1, u32);
     count = PXI_COMMAND_ARG_GET(cmd, 2, u32);
-    in = PXI_COMMAND_ARG_GET(cmd, 3, const u8*);
+    in = PXI_COMMAND_ARG_GET(cmd, 3, const u32*);
 
     dev = getMMCDevice(drive);
 
