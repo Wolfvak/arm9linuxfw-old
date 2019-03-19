@@ -9,17 +9,18 @@ TARGET  := $(shell basename $(CURDIR))
 
 SOURCE  := src
 BUILD   := bin
-SUBARCH := -mcpu=arm946e-s -mfloat-abi=soft -DFIRMWARE_VERSION=$(REV) \
+INCDIR	:= inc
+SUBARCH := -mcpu=arm946e-s -mfloat-abi=soft -DFW_VER=$(REV) \
            -marm -mno-thumb-interwork -ggdb
 
-INCLUDE := -I$(SOURCE) -Iinc
+INCLUDE := -I$(SOURCE) -I$(INCDIR)
 ASFLAGS := $(SUBARCH) $(INCLUDE) -x assembler-with-cpp
 CFLAGS  := $(SUBARCH) $(INCLUDE) -O2 -std=c99 -pipe -fomit-frame-pointer \
            -ffunction-sections -ffast-math -Wall -Wextra \
-           -Wno-unused-variable -Wno-unused-parameter
+           -Wno-unused-variable -Wno-unused-parameter -ffreestanding
 
 LDFLAGS := -Tlink.ld -Wl,--gc-sections,--nmagic,-z,max-page-size=4 \
-           -nostartfiles $(SUBARCH)
+           -nostartfiles $(SUBARCH) -ffreestanding
 
 SOURCE_OUTPUT := $(patsubst $(SOURCE)/%.c, $(BUILD)/%.c.o, \
                  $(patsubst $(SOURCE)/%.s, $(BUILD)/%.s.o, \

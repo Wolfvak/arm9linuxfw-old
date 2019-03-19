@@ -39,7 +39,8 @@ irq_handler(void)
 void irq_reset(void)
 {
     // clear the interrupt handler table
-    memset(interrupts, 0, sizeof(interrupts));
+    for (size_t i = 0; i < ARRAY_SIZE(interrupts); i++)
+        interrupts[i] = NULL;
 
     // disable all interrupts, acknowledge all pending interrupts
     REG_IRQ[0] = 0;

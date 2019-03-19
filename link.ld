@@ -4,7 +4,7 @@ ENTRY(__start)
 
 MEMORY
 {
-  AHBRAM  (RWX) : ORIGIN = 0x08080000, LENGTH = 512K
+  AHBRAM  (RWX) : ORIGIN = 0x08080000, LENGTH = 128K
   VECTOR  (RWX) : ORIGIN = 0x08000000, LENGTH = 64
   ITCM    (RWX) : ORIGIN = 0x01FF8000, LENGTH = 32K
   DTCM    (RW)  : ORIGIN = 0x40000000, LENGTH = 16K
@@ -41,6 +41,13 @@ SECTIONS
     {
         __data_lma = LOADADDR(.data);
         __data_s = ABSOLUTE(.);
+
+        __pxicmd_dev_s = ABSOLUTE(.);
+        KEEP(*(.rodata.pxicmd_dev))
+        __pxicmd_dev_e = ABSOLUTE(.);
+
+        . = ALIGN(16);
+
         *(.data*)
         *(.rodata*)
         . = ALIGN(16);

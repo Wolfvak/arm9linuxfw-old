@@ -64,8 +64,11 @@ leave_critical_section(irqsave_status stat) {
 
 static inline void
 wait_for_interrupt(void) {
-    asmv("mcr p15, 0, %0, c7, c0, 4\n\t"
-        :: "r"(0) : "memory");
+    asmv(
+        "mcr p15, 0, %0, c7, c10, 4\n\t" // drain write buffer
+        "mcr p15, 0, %0, c7, c0, 4\n\t" // wait for interrupt
+        :: "r"(0) : "memory"
+    );
 }
 
 #define ATOMIC_BLOCK for(irqsave_status _s = enter_critical_section(); _s != 0xFF; leave_critical_section(_s), _s = 0xFF)

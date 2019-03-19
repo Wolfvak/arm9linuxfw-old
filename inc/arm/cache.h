@@ -3,7 +3,7 @@
 #include <common.h>
 
 static inline void
-cache_drainwritebuf(void) {
+cache_membarrier(void) {
     asmv("mcr p15, 0, %0, c7, c10, 4\n\t"
         :: "r"(0) : "memory");
 }
@@ -12,8 +12,6 @@ static inline void
 cache_invalidate_ic(void) {
     asmv("mcr p15, 0, %0, c7, c5, 0\n\t"
         :: "r"(0) : "memory");
-
-    cache_drainwritebuf();
 }
 
 static inline void
@@ -27,15 +25,12 @@ cache_invalidate_ic_range(const void *base, u32 len) {
 
         addr += 0x20;
     } while(len--);
-
-    cache_drainwritebuf();
 }
 
 static inline void
 cache_invalidate_dc(void) {
     asmv("mcr p15, 0, %0, c7, c6, 0\n\t"
         :: "r"(0) : "memory");
-    cache_drainwritebuf();
 }
 
 static inline void
@@ -48,8 +43,6 @@ cache_invalidate_dc_range(const void *base, u32 len) {
             :: "r"(addr) : "memory");
         addr += 0x20;
     } while(len--);
-
-    cache_drainwritebuf();
 }
 
 static inline void
@@ -65,8 +58,6 @@ cache_writeback_dc(void) {
         } while(ind < 0x400);
         seg += 0x40000000;
     } while(seg != 0);
-
-    cache_drainwritebuf();
 }
 
 static inline
@@ -80,8 +71,6 @@ void cache_writeback_dc_range(const void *base, u32 len) {
 
         addr += 0x20;
     } while(len--);
-
-    cache_drainwritebuf();
 }
 
 static inline
@@ -97,8 +86,6 @@ void cache_writeback_invalidate_dc(void) {
         } while(ind < 0x400);
         seg += 0x40000000;
     } while(seg != 0);
-
-    cache_drainwritebuf();
 }
 
 static inline
@@ -112,6 +99,4 @@ void cache_writeback_invalidate_dc_range(const void *base, u32 len) {
 
         addr += 0x20;
     } while(len--);
-
-    cache_drainwritebuf();
 }

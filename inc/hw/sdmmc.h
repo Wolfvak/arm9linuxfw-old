@@ -120,8 +120,6 @@ extern "C" {
         uint32_t res;
     } mmcdevice;
 
-    int sdmmc_register_driver(void);
-
 #ifdef __cplusplus
 };
 #endif

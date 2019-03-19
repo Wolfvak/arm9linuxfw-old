@@ -1,22 +1,30 @@
 #include <asm.h>
 #include <arm/cpu.h>
-.align 2
 
 #define IRQ_STACK_SIZE (256)
 #define SYS_STACK_SIZE (8192)
 
 .section .bootstrap, "ax"
 .global __start
+.align 2
 __start:
     @ Switch to supervisor mode and disable interrupts
     msr cpsr_c, #(SR_SVC | SR_NOINT)
 
 
-    @ Cache coherency stuff
+    @ Make sure binary is written back to main memory and out of caches
+    bic r0, pc, #0x1F
+    add r1, r0, #0x10000
+    1:
+        ldr r2, [r0], #0x20
+        cmp r0, r1
+        blo 1b
+
+    @ Cache maintenance operations
     mov r0, #0
-    mcr p15, 0, r0, c7, c5, 0
-    mcr p15, 0, r0, c7, c6, 0
-    mcr p15, 0, r0, c7, c10, 4
+    mcr p15, 0, r0, c7, c10, 4  @ drain write buffer (data memory barrier)
+    mcr p15, 0, r0, c7, c6, 0   @ flush data cache
+    mcr p15, 0, r0, c7, c5, 0   @ flush instruction cache
 
 
     @ Disable the MPU, caches, TCMs, set high exception vectors
@@ -26,8 +34,8 @@ __start:
 
 
     @ Setup Tightly Coupled Memory
-    ldr r0, =0x4000000A @ DTCM @ 0x40000000 / 16KB (16KB)
-    ldr r1, =0x00000024 @ ITCM @ 0x00000000 / 32KB (128MB)
+    ldr r0, =0x4000000A @ DTCM @ 0x40000000 / 16KB (16KB mirror)
+    ldr r1, =0x00000024 @ ITCM @ 0x00000000 / 32KB (128MB mirror)
     mcr p15, 0, r0, c9, c1, 0
     mcr p15, 0, r1, c9, c1, 1
     NOP_SLED 2
@@ -46,13 +54,13 @@ __start:
     ldr r2, =__vector_e
     bl BootstrapReloc
 
-    @ Relocate executable
+    @ Relocate executable code
     ldr r0, =__text_lma
     ldr r1, =__text_s
     ldr r2, =__text_e
     bl BootstrapReloc
 
-    @ Relocate data & rodata
+    @ Relocate data and rodata
     ldr r0, =__data_lma
     ldr r1, =__data_s
     ldr r2, =__data_e
@@ -76,24 +84,24 @@ __start:
 
 @ void BootstrapReloc(void *lma, void *vma_start, void *vma_end)
 @ equivalent to memcpy(vma_start, lma, vma_end - vma_start)
+@ assumes all pointers are 16byte aligned
 BootstrapReloc:
     cmp r1, r2
-    ldrlo r3, [r0], #4
-    strlo r3, [r1], #4
+    ldmloia r0!, {r3-r6}
+    stmloia r1!, {r3-r6}
     blo BootstrapReloc
     bx lr
 
 .pool
 
 
-
 ASM_FUNCTION start_itcm
     @ Setup stacks
     msr cpsr_c, #(SR_IRQ | SR_NOINT)
-    ldr sp, =(irq_stack + IRQ_STACK_SIZE)
+    ldr sp, =(irq_stack_bottom + IRQ_STACK_SIZE)
 
     msr cpsr_c, #(SR_SYS | SR_NOINT)
-    ldr sp, =(sys_stack + SYS_STACK_SIZE)
+    ldr sp, =(sys_stack_bottom + SYS_STACK_SIZE)
 
 
     @ MPU Regions:
@@ -150,20 +158,24 @@ ASM_FUNCTION start_itcm
 
 
     @ Branch to C code
-    ldr r12, =pxicmd_mainloop
-    bx r12
+    ldr lr, =pxicmd_mainloop
+    bx lr
 
 .section .bss.stacks
-.global irq_stack
-irq_stack:
+.align 3
+
+.global irq_stack_bottom
+irq_stack_bottom:
     .space (IRQ_STACK_SIZE)
 
-.global sys_stack
-sys_stack:
+.global sys_stack_bottom
+sys_stack_bottom:
     .space (SYS_STACK_SIZE)
 
 
 .section .rodata.mpu_regions
+.align 2
+
 .global mpu_regions
 mpu_regions:
     .word 0x01FF8035 @ ITCM

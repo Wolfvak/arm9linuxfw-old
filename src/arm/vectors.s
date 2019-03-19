@@ -1,6 +1,6 @@
 #include <asm.h>
 #include <arm/cpu.h>
-.align 2
+
 .arm
 
 .macro TRAP_ENTRY xrq_id
@@ -8,6 +8,7 @@
 .endm
 
 .section .vector, "ax"
+.align 2
 .global vector
 vector:
     ldr pc, _irq_vector

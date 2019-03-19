@@ -432,14 +432,16 @@ pxi_sdmmc_init(pxi_command *cmd, const pxi_device *drv)
     sdmmc_init();
     Nand_Init();
     SD_Init();
-    PXI_COMMAND_ARG_SET(cmd, 0, 2);
+
+    if (PXI_COMMAND_ARGC(cmd) > 0)
+        PXI_COMMAND_ARG_SET(cmd, 0, 2);
     return 0;
 }
 
 static int
 pxi_sdmmc_size(pxi_command *cmd, const pxi_device *drv)
 {
-    for (int i = 0; i < cmd->argc; i++) {
+    for (int i = 0; i < PXI_COMMAND_ARGC(cmd); i++) {
         mmcdevice *dev = getMMCDevice(i);
         PXI_COMMAND_ARG_SET(cmd, i, dev ? dev->total_size : 0);
     }
@@ -501,35 +503,11 @@ pxi_mmc_write(pxi_command *cmd, const pxi_device *drv)
     return 0;
 }
 
-static const pxi_device_function sdmmc_functions[] = {
-    {
-        .name = "init",
-        .pxi_cb = pxi_sdmmc_init,
-    },
-    {
-        .name = "size",
-        .pxi_cb = pxi_sdmmc_size,
-    },
-
-    {
-        .name = "read",
-        .pxi_cb = pxi_mmc_read,
-    },
-    {
-        .name = "write",
-        .pxi_cb = pxi_mmc_write
-    },
+static const pxi_cb sdmmc_ops[] = {
+    pxi_sdmmc_init,
+    pxi_sdmmc_size,
+    pxi_mmc_read,
+    pxi_mmc_write,
 };
 
-static const pxi_device sdmmc_device = {
-    .name = "sdmmc",
-
-    .functions = sdmmc_functions,
-    .fn_count = ARRAY_SIZE(sdmmc_functions),
-};
-
-int
-sdmmc_register_driver(void)
-{
-    return pxicmd_install_drv(&sdmmc_device);
-}
+PXI_COMMAND_DEVICE(sdmmc_device, "sdmmc", sdmmc_ops);

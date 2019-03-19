@@ -20,7 +20,7 @@
 #define PXI_SEND_FIFO_CLEAR      (BIT(3))
 #define PXI_RECV_FIFO_EMPTY      (BIT(8))
 #define PXI_RECV_FIFO_FULL       (BIT(9))
-#define PXI_RECV_FIFO_NEMPTY_IRQ (BIT(10))
+#define PXI_RECV_FIFO_AVAIL_IRQ  (BIT(10))
 #define PXI_FIFO_ERROR_ACK       (BIT(14))
 #define PXI_FIFO_ENABLE          (BIT(15))
 
@@ -32,37 +32,37 @@
 
 void pxi_reset(void);
 
-static inline bool pxi_sendfifofull(void) {
+static inline bool pxi_tx_full(void) {
     return (REG_PXI_CNT & PXI_SEND_FIFO_FULL);
 }
 
-static inline bool pxi_sendfifoempty(void) {
+static inline bool pxi_tx_empty(void) {
     return (REG_PXI_CNT & PXI_SEND_FIFO_EMPTY);
 }
 
-static inline bool pxi_recvfifofull(void) {
+static inline bool pxi_rx_full(void) {
     return (REG_PXI_CNT & PXI_RECV_FIFO_FULL);
 }
 
-static inline bool pxi_recvfifoempty(void) {
+static inline bool pxi_rx_empty(void) {
     return (REG_PXI_CNT & PXI_RECV_FIFO_EMPTY);
 }
 
-static inline u8 pxi_recvsync(void) {
+static inline u8 pxi_rx_sync(void) {
     return REG_PXI_SYNC_RECV;
 }
 
-static inline void pxi_sendsync(u8 b) {
+static inline void pxi_tx_sync(u8 b) {
     REG_PXI_SYNC_SEND = b;
 }
 
-static inline u32 pxi_recv(void) {
-    while(pxi_recvfifoempty());
+static inline u32 pxi_rx(void) {
+    while(pxi_rx_empty());
     return REG_PXI_RECV;
 }
 
-static inline void pxi_send(u32 w) {
-    while(pxi_sendfifofull());
+static inline void pxi_tx(u32 w) {
+    while(pxi_tx_full());
     REG_PXI_SEND = w;
 }
 
