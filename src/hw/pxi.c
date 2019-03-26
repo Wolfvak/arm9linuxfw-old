@@ -1,5 +1,5 @@
-#include <common.h>
-#include <hw/pxi.h>
+#include "common.h"
+#include "hw/pxi.h"
 
 void
 pxi_reset(void)

@@ -1,5 +1,5 @@
-#include <asm.h>
-#include <arm/cpu.h>
+#include "asm.h"
+#include "arm/cpu.h"
 
 .arm
 

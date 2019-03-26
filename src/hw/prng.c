@@ -1,5 +1,5 @@
-#include <common.h>
-#include <pxicmd.h>
+#include "common.h"
+#include "pxicmd.h"
 
 #define REG_PRNG (*(vu32*)0x10011000)
 

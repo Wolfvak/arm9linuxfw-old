@@ -1,5 +1,5 @@
-#include <common.h>
-#include <arm/cpu.h>
+#include "common.h"
+#include "arm/cpu.h"
 
 static const u8 bug_font[];
 

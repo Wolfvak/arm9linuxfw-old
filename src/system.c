@@ -1,6 +1,6 @@
-#include <common.h>
+#include "common.h"
 
-#include <pxicmd.h>
+#include "pxicmd.h"
 
 static int
 system_fwver(pxi_command *cmd, const pxi_device *dev)

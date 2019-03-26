@@ -32,6 +32,23 @@ typedef volatile s16 vs16;
 typedef volatile s32 vs32;
 typedef volatile s64 vs64;
 
+static inline u32 xbits(u32 *arr, u32 start, u32 n)
+{
+	u32 ret, mask, off, shift;
+
+	if (n > 32)
+		return -1;
+
+	mask = ((u32)(1 << n)) - 1;
+	off = start / 32;
+	shift = start % 32;
+
+	ret = arr[off] >> shift;
+	if ((n + shift) > 32)
+		ret |= arr[off+1] << (32 - shift);
+	return ret & mask;
+}
+
 #endif // __ASSEMBLER__
 
 #define BIT(x)      (1 << (x))

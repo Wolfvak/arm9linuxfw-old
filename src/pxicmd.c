@@ -1,11 +1,11 @@
-#include <common.h>
-#include <interrupt.h>
-#include <ringbuffer.h>
-#include <pxicmd.h>
+#include "common.h"
+#include "interrupt.h"
+#include "ringbuffer.h"
+#include "pxicmd.h"
 
-#include <arm/cpu.h>
-#include <hw/irq.h>
-#include <hw/pxi.h>
+#include "arm/cpu.h"
+#include "hw/irq.h"
+#include "hw/pxi.h"
 
 #define PXICMD_MAX_DRV  (16)
 #define PXICMD_MAX_JOBS (128)
@@ -15,7 +15,7 @@ static DECLARE_RINGBUFFER(pxicmd_jobs, PXICMD_MAX_JOBS);
 static const pxi_device *drivers[PXICMD_MAX_DRV];
 static int driver_count;
 
-static int __attribute__((noinline))
+static int
 pxicmd_count_fn(pxi_command *cmd, const pxi_device *dev)
 {
     size_t argc = PXI_COMMAND_ARGC(cmd);
@@ -39,7 +39,7 @@ own_strncpy(void *dst, const char *src, size_t n)
     } while(c != '\0');
 }
 
-static int __attribute__((noinline))
+static int
 pxicmd_ident_fn(pxi_command *cmd, const pxi_device *dev)
 {
     size_t argc = PXI_COMMAND_ARGC(cmd);
@@ -53,7 +53,7 @@ pxicmd_ident_fn(pxi_command *cmd, const pxi_device *dev)
     return 0;
 }
 
-static int __attribute__((noinline))
+static int
 pxicmd_run_drv(pxi_command *cmd)
 {
     const pxi_device *dev;
@@ -95,7 +95,7 @@ pxicmd_rx_handler(u32 unused)
             ringbuffer_store(pxicmd_jobs, cmd);
         }
 
-        // send ack, if state < 0 then it should be retried by the client
+        // send ack, if state " 0 then it should be retried by the client
         pxi_tx(cmd->ret_val);
     }
     return IRQ_HANDLED;
@@ -113,7 +113,7 @@ pxicmd_sync_handler(u32 unused)
     return IRQ_HANDLED;
 }
 
-static void __attribute__((noinline))
+static void
 pxicmd_install_statics(void)
 {
     const pxi_device *dev = PXI_COMMAND_DEVICES_FIRST;
@@ -163,7 +163,7 @@ pxicmd_mainloop(void)
     }
 }
 
-int __attribute__((noinline))
+int
 pxicmd_install_drv(const pxi_device *drv)
 {
     int ret;

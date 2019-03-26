@@ -1,5 +1,5 @@
-#include <asm.h>
-#include <arm/cpu.h>
+#include "asm.h"
+#include "arm/cpu.h"
 
 #define IRQ_STACK_SIZE (256)
 #define SYS_STACK_SIZE (8192)
@@ -160,6 +160,27 @@ ASM_FUNCTION start_itcm
     @ Branch to C code
     ldr lr, =pxicmd_mainloop
     bx lr
+
+
+ASM_FUNCTION sdmmc_read_stuff
+@ void sdmmc_read_stuff(vu32 *reg, u32 *dest)
+@ reads 128 words in one go
+    push {r4-r8, lr}
+
+    .rept 16
+    ldr r2, [r0]
+    ldr r3, [r0]
+    ldr r4, [r0]
+    ldr r5, [r0]
+    ldr r6, [r0]
+    ldr r7, [r0]
+    ldr r8, [r0]
+    ldr lr, [r0]
+    stmia r1!, {r2-r8, lr}
+    .endr
+
+    pop {r4-r8, pc}
+
 
 .section .bss.stacks
 .align 3

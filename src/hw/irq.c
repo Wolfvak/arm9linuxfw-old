@@ -1,8 +1,8 @@
-#include <common.h>
-#include <interrupt.h>
+#include "common.h"
+#include "interrupt.h"
 
-#include <arm/cpu.h>
-#include <hw/irq.h>
+#include "arm/cpu.h"
+#include "hw/irq.h"
 
 #define REG_IRQ ((vu32*)0x10001000)
 

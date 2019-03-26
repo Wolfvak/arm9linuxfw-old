@@ -25,7 +25,7 @@
  * along with this program. If not, see http://www.gnu.org/licenses/.
  */
 
-#include <common.h>
+#include "common.h"
 
 #define SDMMC_BASE              0x10006000
 

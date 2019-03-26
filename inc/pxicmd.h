@@ -1,6 +1,6 @@
 #pragma once
 
-#include <common.h>
+#include "common.h"
 
 /*
  * PXI is a hardware block contained in the 3DS system, which both the
