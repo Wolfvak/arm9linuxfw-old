@@ -1,6 +1,6 @@
 diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/Kconfig linux-3ds/arch/arm/Kconfig
 --- linux-5.0.3/arch/arm/Kconfig	2019-03-19 09:10:58.000000000 -0300
-+++ linux-3ds/arch/arm/Kconfig	2019-03-20 18:41:35.684571400 -0300
++++ linux-3ds/arch/arm/Kconfig	2019-05-04 18:53:35.893807600 -0300
 @@ -384,6 +384,23 @@
  	help
  	  This enables support for systems based on the Hilscher NetX Soc
@@ -27,7 +27,7 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/Kconfig linux-3ds/arch/arm/Kco
  	depends on MMU
 diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/Makefile linux-3ds/arch/arm/Makefile
 --- linux-5.0.3/arch/arm/Makefile	2019-03-19 09:10:58.000000000 -0300
-+++ linux-3ds/arch/arm/Makefile	2019-03-20 18:41:35.693546800 -0300
++++ linux-3ds/arch/arm/Makefile	2019-05-04 18:53:35.895784600 -0300
 @@ -192,6 +192,7 @@
  machine-$(CONFIG_ARCH_MEDIATEK)		+= mediatek
  machine-$(CONFIG_ARCH_MXS)		+= mxs
@@ -38,8 +38,8 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/Makefile linux-3ds/arch/arm/Ma
  machine-$(CONFIG_ARCH_NSPIRE)		+= nspire
 diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/boot/dts/nintendo3ds_ctr.dts linux-3ds/arch/arm/boot/dts/nintendo3ds_ctr.dts
 --- linux-5.0.3/arch/arm/boot/dts/nintendo3ds_ctr.dts	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/arch/arm/boot/dts/nintendo3ds_ctr.dts	2019-03-20 18:41:35.694544300 -0300
-@@ -0,0 +1,237 @@
++++ linux-3ds/arch/arm/boot/dts/nintendo3ds_ctr.dts	2019-05-11 23:01:14.824711700 -0300
+@@ -0,0 +1,244 @@
 +/dts-v1/;
 +#include <dt-bindings/interrupt-controller/arm-gic.h>
 +
@@ -148,6 +148,13 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/boot/dts/nintendo3ds_ctr.dts l
 +				compatible = "nintendo3ds,nintendo3ds-mcu";
 +				reg = <0x4A>;
 +
++				mcuhid {
++					interrupt-parent = <&gic>;
++
++					compatible = "nintendo3ds,nintendo3ds-mcuhid";
++					interrupts = <GIC_SPI 0x51 IRQ_TYPE_EDGE_RISING>;
++				};
++
 +				charger {
 +					compatible = "nintendo3ds,nintendo3ds-charger";
 +				};
@@ -156,13 +163,14 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/boot/dts/nintendo3ds_ctr.dts l
 +					compatible = "nintendo3ds,nintendo3ds-reset";
 +				};
 +
-+				infoled {
-+					compatible = "nintendo3ds,nintendo3ds-infoled";
++				leds {
++					compatible = "nintendo3ds,nintendo3ds-leds";
 +				};
 +
 +				rtc {
 +					compatible = "nintendo3ds,nintendo3ds-rtc";
 +				};
++
 +			};
 +		};
 +
@@ -180,9 +188,13 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/boot/dts/nintendo3ds_ctr.dts l
 +
 +			compatible = "nintendo3ds,nintendo3ds-spi";
 +			reg = <0x10160000 0x1000>;
-+			interrupts =
-+				<GIC_SPI 0x56 IRQ_TYPE_EDGE_RISING>,
-+				<GIC_SPI 0x57 IRQ_TYPE_EDGE_RISING>;
++
++			flash: nvram@1 {
++				compatible = "jedec,spi-nor";
++				reg = <1>;
++
++				spi-max-frequency = <256000>;
++			};
 +		};
 +
 +		spi1: spi@10142000 {
@@ -191,9 +203,6 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/boot/dts/nintendo3ds_ctr.dts l
 +
 +			compatible = "nintendo3ds,nintendo3ds-spi";
 +			reg = <0x10142000 0x1000>;
-+			interrupts =
-+				<GIC_SPI 0x56 IRQ_TYPE_EDGE_RISING>,
-+				<GIC_SPI 0x57 IRQ_TYPE_EDGE_RISING>;
 +
 +			ts: codec@3 {
 +				compatible = "nintendo3ds,nintendo3ds-codec";
@@ -210,11 +219,9 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/boot/dts/nintendo3ds_ctr.dts l
 +		spi2: spi@10143000 {
 +			#address-cells = <1>;
 +			#size-cells = <0>;
++
 +			compatible = "nintendo3ds,nintendo3ds-spi";
 +			reg = <0x10143000 0x1000>;
-+			interrupts =
-+				<GIC_SPI 0x56 IRQ_TYPE_EDGE_RISING>,
-+				<GIC_SPI 0x57 IRQ_TYPE_EDGE_RISING>;
 +		};
 +
 +		refclk: refclk134mkhz {
@@ -242,8 +249,8 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/boot/dts/nintendo3ds_ctr.dts l
 +			#interrupt-cells = <3>;
 +			#address-cells = <1>;
 +			interrupt-controller;
-+			reg = <0x17E01000 0x1000>, //GIC distributor register
-+			      <0x17E00100 0x100>;  //GIC cpu interface register
++			reg = <0x17E01000 0x1000>,
++			      <0x17E00100 0x100>;
 +		};
 +
 +		scu: scu@17E00000 {
@@ -279,18 +286,18 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/boot/dts/nintendo3ds_ctr.dts l
 +};
 diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/configs/nintendo3ds_defconfig linux-3ds/arch/arm/configs/nintendo3ds_defconfig
 --- linux-5.0.3/arch/arm/configs/nintendo3ds_defconfig	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/arch/arm/configs/nintendo3ds_defconfig	2019-03-26 11:51:35.006950200 -0300
-@@ -0,0 +1,2332 @@
++++ linux-3ds/arch/arm/configs/nintendo3ds_defconfig	2019-05-13 09:33:39.163124200 -0300
+@@ -0,0 +1,2411 @@
 +#
 +# Automatically generated file; DO NOT EDIT.
 +# Linux/arm 5.0.3 Kernel Configuration
 +#
 +
 +#
-+# Compiler: arm-linux-gnueabi-gcc (Ubuntu/Linaro 7.3.0-27ubuntu1~18.04) 7.3.0
++# Compiler: arm-linux-gnueabi-gcc (Ubuntu/Linaro 7.4.0-1ubuntu1~18.04) 7.4.0
 +#
 +CONFIG_CC_IS_GCC=y
-+CONFIG_GCC_VERSION=70300
++CONFIG_GCC_VERSION=70400
 +CONFIG_CLANG_VERSION=0
 +CONFIG_CC_HAS_ASM_GOTO=y
 +CONFIG_IRQ_WORK=y
@@ -694,8 +701,6 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/configs/nintendo3ds_defconfig 
 +#
 +# Firmware Drivers
 +#
-+# CONFIG_ARM_SCMI_PROTOCOL is not set
-+# CONFIG_ARM_SCPI_PROTOCOL is not set
 +# CONFIG_FIRMWARE_MEMMAP is not set
 +# CONFIG_FW_CFG_SYSFS is not set
 +# CONFIG_GOOGLE_FIRMWARE is not set
@@ -970,6 +975,7 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/configs/nintendo3ds_defconfig 
 +CONFIG_REGMAP=y
 +CONFIG_REGMAP_I2C=y
 +CONFIG_REGMAP_SPI=y
++CONFIG_REGMAP_MMIO=y
 +
 +#
 +# Bus devices
@@ -979,7 +985,83 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/configs/nintendo3ds_defconfig 
 +# CONFIG_VEXPRESS_CONFIG is not set
 +# CONFIG_CONNECTOR is not set
 +# CONFIG_GNSS is not set
-+# CONFIG_MTD is not set
++CONFIG_MTD=y
++# CONFIG_MTD_TESTS is not set
++# CONFIG_MTD_CMDLINE_PARTS is not set
++# CONFIG_MTD_AFS_PARTS is not set
++# CONFIG_MTD_OF_PARTS is not set
++# CONFIG_MTD_AR7_PARTS is not set
++
++#
++# Partition parsers
++#
++# CONFIG_MTD_REDBOOT_PARTS is not set
++
++#
++# User Modules And Translation Layers
++#
++# CONFIG_MTD_BLOCK is not set
++# CONFIG_MTD_BLOCK_RO is not set
++# CONFIG_FTL is not set
++# CONFIG_NFTL is not set
++# CONFIG_INFTL is not set
++# CONFIG_RFD_FTL is not set
++# CONFIG_SSFDC is not set
++# CONFIG_SM_FTL is not set
++# CONFIG_MTD_OOPS is not set
++# CONFIG_MTD_SWAP is not set
++# CONFIG_MTD_PARTITIONED_MASTER is not set
++
++#
++# RAM/ROM/Flash chip drivers
++#
++# CONFIG_MTD_CFI is not set
++# CONFIG_MTD_JEDECPROBE is not set
++CONFIG_MTD_MAP_BANK_WIDTH_1=y
++CONFIG_MTD_MAP_BANK_WIDTH_2=y
++CONFIG_MTD_MAP_BANK_WIDTH_4=y
++CONFIG_MTD_CFI_I1=y
++CONFIG_MTD_CFI_I2=y
++# CONFIG_MTD_RAM is not set
++# CONFIG_MTD_ROM is not set
++# CONFIG_MTD_ABSENT is not set
++
++#
++# Mapping drivers for chip access
++#
++# CONFIG_MTD_COMPLEX_MAPPINGS is not set
++# CONFIG_MTD_PLATRAM is not set
++
++#
++# Self-contained MTD device drivers
++#
++# CONFIG_MTD_DATAFLASH is not set
++CONFIG_MTD_M25P80=y
++# CONFIG_MTD_MCHP23K256 is not set
++CONFIG_MTD_SST25L=y
++# CONFIG_MTD_SLRAM is not set
++# CONFIG_MTD_PHRAM is not set
++# CONFIG_MTD_MTDRAM is not set
++# CONFIG_MTD_BLOCK2MTD is not set
++
++#
++# Disk-On-Chip Device Drivers
++#
++# CONFIG_MTD_DOCG3 is not set
++# CONFIG_MTD_ONENAND is not set
++# CONFIG_MTD_NAND is not set
++# CONFIG_MTD_SPI_NAND is not set
++
++#
++# LPDDR & LPDDR2 PCM memory drivers
++#
++# CONFIG_MTD_LPDDR is not set
++# CONFIG_MTD_LPDDR2_NVM is not set
++CONFIG_MTD_SPI_NOR=y
++# CONFIG_MTD_MT81xx_NOR is not set
++CONFIG_MTD_SPI_NOR_USE_4K_SECTORS=y
++# CONFIG_SPI_CADENCE_QUADSPI is not set
++# CONFIG_MTD_UBI is not set
 +CONFIG_DTC=y
 +CONFIG_OF=y
 +# CONFIG_OF_UNITTEST is not set
@@ -1338,7 +1420,7 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/configs/nintendo3ds_defconfig 
 +CONFIG_SPI=y
 +# CONFIG_SPI_DEBUG is not set
 +CONFIG_SPI_MASTER=y
-+# CONFIG_SPI_MEM is not set
++CONFIG_SPI_MEM=y
 +
 +#
 +# SPI Master Controller Drivers
@@ -1408,6 +1490,8 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/configs/nintendo3ds_defconfig 
 +# CONFIG_GPIO_MOCKUP is not set
 +# CONFIG_GPIO_MPC8XXX is not set
 +# CONFIG_GPIO_PL061 is not set
++# CONFIG_GPIO_SAMA5D2_PIOBU is not set
++# CONFIG_GPIO_SYSCON is not set
 +# CONFIG_GPIO_XILINX is not set
 +# CONFIG_GPIO_ZEVIO is not set
 +
@@ -1440,12 +1524,15 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/configs/nintendo3ds_defconfig 
 +# CONFIG_POWER_AVS is not set
 +CONFIG_POWER_RESET=y
 +# CONFIG_POWER_RESET_BRCMKONA is not set
++# CONFIG_POWER_RESET_BRCMSTB is not set
 +# CONFIG_POWER_RESET_GPIO is not set
 +# CONFIG_POWER_RESET_GPIO_RESTART is not set
 +# CONFIG_POWER_RESET_LTC2952 is not set
 +# CONFIG_POWER_RESET_RESTART is not set
-+# CONFIG_POWER_RESET_SYSCON is not set
-+# CONFIG_POWER_RESET_SYSCON_POWEROFF is not set
++# CONFIG_POWER_RESET_VERSATILE is not set
++CONFIG_POWER_RESET_SYSCON=y
++CONFIG_POWER_RESET_SYSCON_POWEROFF=y
++# CONFIG_SYSCON_REBOOT_MODE is not set
 +CONFIG_POWER_SUPPLY=y
 +# CONFIG_POWER_SUPPLY_DEBUG is not set
 +# CONFIG_PDA_POWER is not set
@@ -1540,7 +1627,7 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/configs/nintendo3ds_defconfig 
 +# CONFIG_MFD_SMSC is not set
 +# CONFIG_ABX500_CORE is not set
 +# CONFIG_MFD_STMPE is not set
-+# CONFIG_MFD_SYSCON is not set
++CONFIG_MFD_SYSCON=y
 +# CONFIG_MFD_TI_AM335X_TSCADC is not set
 +# CONFIG_MFD_LP3943 is not set
 +# CONFIG_MFD_LP8788 is not set
@@ -1708,6 +1795,7 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/configs/nintendo3ds_defconfig 
 +# LED driver for blink(1) USB RGB LED is under Special HID drivers (HID_THINGM)
 +#
 +# CONFIG_LEDS_BLINKM is not set
++# CONFIG_LEDS_SYSCON is not set
 +# CONFIG_LEDS_MLXREG is not set
 +# CONFIG_LEDS_USER is not set
 +
@@ -1876,8 +1964,9 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/configs/nintendo3ds_defconfig 
 +CONFIG_NINTENDO3DS_I2C=y
 +CONFIG_NINTENDO3DS_MCU=y
 +CONFIG_NINTENDO3DS_RTC=y
++CONFIG_NINTENDO3DS_LEDS=y
 +CONFIG_NINTENDO3DS_RESET=y
-+CONFIG_NINTENDO3DS_INFOLED=y
++CONFIG_NINTENDO3DS_MCUHID=y
 +CONFIG_NINTENDO3DS_CHARGER=y
 +CONFIG_NINTENDO3DS_BACKLIGHT=y
 +# CONFIG_GOLDFISH is not set
@@ -1909,12 +1998,7 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/configs/nintendo3ds_defconfig 
 +CONFIG_TIMER_OF=y
 +CONFIG_TIMER_PROBE=y
 +# CONFIG_ARM_TIMER_SP804 is not set
-+CONFIG_MAILBOX=y
-+# CONFIG_ARM_MHU is not set
-+# CONFIG_PLATFORM_MHU is not set
-+# CONFIG_PL320_MBOX is not set
-+# CONFIG_ALTERA_MBOX is not set
-+# CONFIG_MAILBOX_TEST is not set
++# CONFIG_MAILBOX is not set
 +# CONFIG_IOMMU_SUPPORT is not set
 +
 +#
@@ -1925,7 +2009,6 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/configs/nintendo3ds_defconfig 
 +#
 +# Rpmsg drivers
 +#
-+# CONFIG_RPMSG_QCOM_GLINK_RPM is not set
 +# CONFIG_RPMSG_VIRTIO is not set
 +# CONFIG_SOUNDWIRE is not set
 +
@@ -1972,7 +2055,8 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/configs/nintendo3ds_defconfig 
 +CONFIG_ARM_GIC=y
 +CONFIG_ARM_GIC_MAX_NR=1
 +# CONFIG_IPACK_BUS is not set
-+# CONFIG_RESET_CONTROLLER is not set
++CONFIG_RESET_CONTROLLER=y
++# CONFIG_RESET_TI_SYSCON is not set
 +# CONFIG_FMC is not set
 +
 +#
@@ -1981,9 +2065,11 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/configs/nintendo3ds_defconfig 
 +# CONFIG_GENERIC_PHY is not set
 +# CONFIG_BCM_KONA_USB2_PHY is not set
 +# CONFIG_PHY_CADENCE_DP is not set
++# CONFIG_PHY_CADENCE_SIERRA is not set
 +# CONFIG_PHY_FSL_IMX8MQ_USB is not set
 +# CONFIG_PHY_PXA_28NM_HSIC is not set
 +# CONFIG_PHY_PXA_28NM_USB2 is not set
++# CONFIG_PHY_OCELOT_SERDES is not set
 +# CONFIG_POWERCAP is not set
 +# CONFIG_MCB is not set
 +
@@ -2460,7 +2546,7 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/configs/nintendo3ds_defconfig 
 +# CONFIG_PAGE_OWNER is not set
 +CONFIG_DEBUG_FS=y
 +# CONFIG_HEADERS_CHECK is not set
-+# CONFIG_DEBUG_SECTION_MISMATCH is not set
++CONFIG_DEBUG_SECTION_MISMATCH=y
 +CONFIG_SECTION_MISMATCH_WARN_ONLY=y
 +# CONFIG_DEBUG_FORCE_WEAK_PER_CPU is not set
 +CONFIG_MAGIC_SYSRQ=y
@@ -2615,7 +2701,7 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/configs/nintendo3ds_defconfig 
 +# CONFIG_CORESIGHT is not set
 diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/kernel/smp.c linux-3ds/arch/arm/kernel/smp.c
 --- linux-5.0.3/arch/arm/kernel/smp.c	2019-03-19 09:10:58.000000000 -0300
-+++ linux-3ds/arch/arm/kernel/smp.c	2019-03-20 18:41:35.697536500 -0300
++++ linux-3ds/arch/arm/kernel/smp.c	2019-05-04 18:53:35.901332400 -0300
 @@ -523,7 +523,7 @@
  	S(IPI_COMPLETION, "completion interrupts"),
  };
@@ -2627,7 +2713,7 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/kernel/smp.c linux-3ds/arch/ar
  	__smp_cross_call(target, ipinr);
 diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/mach-nintendo3ds/Makefile linux-3ds/arch/arm/mach-nintendo3ds/Makefile
 --- linux-5.0.3/arch/arm/mach-nintendo3ds/Makefile	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/arch/arm/mach-nintendo3ds/Makefile	2019-03-20 18:41:35.698533900 -0300
++++ linux-3ds/arch/arm/mach-nintendo3ds/Makefile	2019-05-04 18:53:35.903340500 -0300
 @@ -0,0 +1,4 @@
 +obj-$(CONFIG_ARCH_NINTENDO3DS) += nintendo3ds_ctr.o
 +obj-$(CONFIG_ARCH_NINTENDO3DS) += bottom_lcd.o
@@ -2635,14 +2721,14 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/mach-nintendo3ds/Makefile linu
 +obj-$(CONFIG_SMP) += headsmp.o
 diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/mach-nintendo3ds/Makefile.boot linux-3ds/arch/arm/mach-nintendo3ds/Makefile.boot
 --- linux-5.0.3/arch/arm/mach-nintendo3ds/Makefile.boot	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/arch/arm/mach-nintendo3ds/Makefile.boot	2019-03-20 18:41:35.699532000 -0300
++++ linux-3ds/arch/arm/mach-nintendo3ds/Makefile.boot	2019-05-04 18:53:35.904324500 -0300
 @@ -0,0 +1,3 @@
 +zreladdr-y     += 0x20008000
 +params_phys-y  := 0x20000100
 +initrd_phys-y  := 0x20000000
 diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/mach-nintendo3ds/bottom_lcd.c linux-3ds/arch/arm/mach-nintendo3ds/bottom_lcd.c
 --- linux-5.0.3/arch/arm/mach-nintendo3ds/bottom_lcd.c	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/arch/arm/mach-nintendo3ds/bottom_lcd.c	2019-03-20 18:41:35.701526900 -0300
++++ linux-3ds/arch/arm/mach-nintendo3ds/bottom_lcd.c	2019-05-04 18:53:35.909379400 -0300
 @@ -0,0 +1,144 @@
 +/*
 + *  Nintendo 3DS bottom_lcd.c
@@ -2790,7 +2876,7 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/mach-nintendo3ds/bottom_lcd.c 
 +}
 diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/mach-nintendo3ds/headsmp.S linux-3ds/arch/arm/mach-nintendo3ds/headsmp.S
 --- linux-5.0.3/arch/arm/mach-nintendo3ds/headsmp.S	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/arch/arm/mach-nintendo3ds/headsmp.S	2019-03-20 18:41:35.701526900 -0300
++++ linux-3ds/arch/arm/mach-nintendo3ds/headsmp.S	2019-05-04 18:53:35.912363300 -0300
 @@ -0,0 +1,38 @@
 +/*
 + *  linux/arch/arm/mach-nintendo3ds/headsmp.S
@@ -2832,7 +2918,7 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/mach-nintendo3ds/headsmp.S lin
 +ENDPROC(nintendo3ds_secondary_startup)
 diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/mach-nintendo3ds/include/mach/bottom_lcd.h linux-3ds/arch/arm/mach-nintendo3ds/include/mach/bottom_lcd.h
 --- linux-5.0.3/arch/arm/mach-nintendo3ds/include/mach/bottom_lcd.h	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/arch/arm/mach-nintendo3ds/include/mach/bottom_lcd.h	2019-03-20 18:41:35.703520500 -0300
++++ linux-3ds/arch/arm/mach-nintendo3ds/include/mach/bottom_lcd.h	2019-05-04 18:53:35.914358600 -0300
 @@ -0,0 +1,42 @@
 +/*
 + *  Nintendo 3DS bottom_lcd.h
@@ -2878,7 +2964,7 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/mach-nintendo3ds/include/mach/
 +#endif
 diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/mach-nintendo3ds/include/mach/debug-macro.S linux-3ds/arch/arm/mach-nintendo3ds/include/mach/debug-macro.S
 --- linux-5.0.3/arch/arm/mach-nintendo3ds/include/mach/debug-macro.S	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/arch/arm/mach-nintendo3ds/include/mach/debug-macro.S	2019-03-20 18:41:35.703520500 -0300
++++ linux-3ds/arch/arm/mach-nintendo3ds/include/mach/debug-macro.S	2019-05-04 18:53:35.917346800 -0300
 @@ -0,0 +1,47 @@
 +#ifdef CONFIG_DEBUG_LL_NINTENDO3DS_ARM9
 +
@@ -2929,7 +3015,7 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/mach-nintendo3ds/include/mach/
 +#endif
 diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/mach-nintendo3ds/include/mach/entry-macro.S linux-3ds/arch/arm/mach-nintendo3ds/include/mach/entry-macro.S
 --- linux-5.0.3/arch/arm/mach-nintendo3ds/include/mach/entry-macro.S	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/arch/arm/mach-nintendo3ds/include/mach/entry-macro.S	2019-03-20 18:41:35.705514800 -0300
++++ linux-3ds/arch/arm/mach-nintendo3ds/include/mach/entry-macro.S	2019-05-04 18:53:35.918336100 -0300
 @@ -0,0 +1,12 @@
 +
 +
@@ -2945,7 +3031,7 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/mach-nintendo3ds/include/mach/
 +.endm
 diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/mach-nintendo3ds/include/mach/hardware.h linux-3ds/arch/arm/mach-nintendo3ds/include/mach/hardware.h
 --- linux-5.0.3/arch/arm/mach-nintendo3ds/include/mach/hardware.h	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/arch/arm/mach-nintendo3ds/include/mach/hardware.h	2019-03-20 18:41:35.705514800 -0300
++++ linux-3ds/arch/arm/mach-nintendo3ds/include/mach/hardware.h	2019-05-04 18:53:35.919352800 -0300
 @@ -0,0 +1,21 @@
 +#ifndef __ASM_ARCH_HARDWARE_H
 +#define __ASM_ARCH_HARDWARE_H
@@ -2970,7 +3056,7 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/mach-nintendo3ds/include/mach/
 +#endif
 diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/mach-nintendo3ds/include/mach/irqs.h linux-3ds/arch/arm/mach-nintendo3ds/include/mach/irqs.h
 --- linux-5.0.3/arch/arm/mach-nintendo3ds/include/mach/irqs.h	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/arch/arm/mach-nintendo3ds/include/mach/irqs.h	2019-03-20 18:41:35.706512100 -0300
++++ linux-3ds/arch/arm/mach-nintendo3ds/include/mach/irqs.h	2019-05-04 18:53:35.920333700 -0300
 @@ -0,0 +1,8 @@
 +#ifndef __ASM_ARCH_IRQS_H
 +#define __ASM_ARCH_IRQS_H
@@ -2982,8 +3068,8 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/mach-nintendo3ds/include/mach/
 +#endif
 diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/mach-nintendo3ds/include/mach/platform.h linux-3ds/arch/arm/mach-nintendo3ds/include/mach/platform.h
 --- linux-5.0.3/arch/arm/mach-nintendo3ds/include/mach/platform.h	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/arch/arm/mach-nintendo3ds/include/mach/platform.h	2019-03-20 18:41:35.706512100 -0300
-@@ -0,0 +1,49 @@
++++ linux-3ds/arch/arm/mach-nintendo3ds/include/mach/platform.h	2019-05-11 19:16:55.994734800 -0300
+@@ -0,0 +1,44 @@
 +#ifndef __ASM_ARCH_PLATFORM_H
 +#define __ASM_ARCH_PLATFORM_H
 +
@@ -3027,15 +3113,10 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/mach-nintendo3ds/include/mach/
 +#define NINTENDO3DS_FB_BOT_1		(NINTENDO3DS_FB_TOP_RIGHT2 + NINTENDO3DS_FB_TOP_SIZE)
 +#define NINTENDO3DS_FB_BOT_2		(NINTENDO3DS_FB_BOT_1      + NINTENDO3DS_FB_BOT_SIZE)
 +
-+/* PXI Registers */
-+
-+#define NINTENDO3DS_PXI_REGS_BASE	(0x10163000)
-+#define NINTENDO3DS_PXI_REGS_SIZE	(0x1000)
-+
 +#endif	/* __ASM_ARCH_PLATFORM_H */
 diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/mach-nintendo3ds/include/mach/platsmp.h linux-3ds/arch/arm/mach-nintendo3ds/include/mach/platsmp.h
 --- linux-5.0.3/arch/arm/mach-nintendo3ds/include/mach/platsmp.h	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/arch/arm/mach-nintendo3ds/include/mach/platsmp.h	2019-03-20 18:41:35.707509500 -0300
++++ linux-3ds/arch/arm/mach-nintendo3ds/include/mach/platsmp.h	2019-05-04 18:53:35.929309100 -0300
 @@ -0,0 +1,11 @@
 +/*
 + *  linux/arch/arm/mach-nintendo3ds/include/mach/platsmp.h
@@ -3050,7 +3131,7 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/mach-nintendo3ds/include/mach/
 +extern void nintendo3ds_secondary_startup(void);
 diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/mach-nintendo3ds/include/mach/pxi.h linux-3ds/arch/arm/mach-nintendo3ds/include/mach/pxi.h
 --- linux-5.0.3/arch/arm/mach-nintendo3ds/include/mach/pxi.h	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/arch/arm/mach-nintendo3ds/include/mach/pxi.h	2019-03-21 15:56:35.217944500 -0300
++++ linux-3ds/arch/arm/mach-nintendo3ds/include/mach/pxi.h	2019-05-04 18:53:35.930307200 -0300
 @@ -0,0 +1,36 @@
 +/*
 + *  pxi.h
@@ -3090,7 +3171,7 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/mach-nintendo3ds/include/mach/
 +#endif
 diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/mach-nintendo3ds/include/mach/uncompress.h linux-3ds/arch/arm/mach-nintendo3ds/include/mach/uncompress.h
 --- linux-5.0.3/arch/arm/mach-nintendo3ds/include/mach/uncompress.h	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/arch/arm/mach-nintendo3ds/include/mach/uncompress.h	2019-03-20 18:41:35.709504600 -0300
++++ linux-3ds/arch/arm/mach-nintendo3ds/include/mach/uncompress.h	2019-05-04 18:53:35.933304100 -0300
 @@ -0,0 +1,208 @@
 +//#include <mach/nintendo3ds.h>
 +
@@ -3302,7 +3383,7 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/mach-nintendo3ds/include/mach/
 +}
 diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/mach-nintendo3ds/nintendo3ds_ctr.c linux-3ds/arch/arm/mach-nintendo3ds/nintendo3ds_ctr.c
 --- linux-5.0.3/arch/arm/mach-nintendo3ds/nintendo3ds_ctr.c	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/arch/arm/mach-nintendo3ds/nintendo3ds_ctr.c	2019-03-20 18:41:35.709504600 -0300
++++ linux-3ds/arch/arm/mach-nintendo3ds/nintendo3ds_ctr.c	2019-05-08 11:31:28.639761800 -0300
 @@ -0,0 +1,52 @@
 +#include <linux/kernel.h>
 +#include <linux/init.h>
@@ -3332,7 +3413,7 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/mach-nintendo3ds/nintendo3ds_c
 +	void __iomem *pdn_spi_cnt;
 +
 +	pdn_spi_cnt = ioremap(NINTENDO3DS_REG_PDN_SPI_CNT, 4);
-+	iowrite16(ioread16(pdn_spi_cnt) | 3, pdn_spi_cnt);
++	iowrite16(ioread16(pdn_spi_cnt) | 7, pdn_spi_cnt);
 +	iounmap(pdn_spi_cnt);
 +}
 +
@@ -3358,7 +3439,7 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/mach-nintendo3ds/nintendo3ds_c
 +MACHINE_END
 diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/mach-nintendo3ds/platsmp.c linux-3ds/arch/arm/mach-nintendo3ds/platsmp.c
 --- linux-5.0.3/arch/arm/mach-nintendo3ds/platsmp.c	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/arch/arm/mach-nintendo3ds/platsmp.c	2019-03-20 18:41:35.710502300 -0300
++++ linux-3ds/arch/arm/mach-nintendo3ds/platsmp.c	2019-05-04 18:53:35.937294100 -0300
 @@ -0,0 +1,67 @@
 +/*
 + * SMP support for the Nintendo 3DS
@@ -3429,7 +3510,7 @@ diff -Naur '--exclude=certs' linux-5.0.3/arch/arm/mach-nintendo3ds/platsmp.c lin
 +CPU_METHOD_OF_DECLARE(nintendo3ds_smp, "nintendo3ds,smp", &nintendo3ds_smp_ops);
 diff -Naur '--exclude=certs' linux-5.0.3/copy_3ds.sh linux-3ds/copy_3ds.sh
 --- linux-5.0.3/copy_3ds.sh	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/copy_3ds.sh	2019-03-20 18:41:35.711499300 -0300
++++ linux-3ds/copy_3ds.sh	2019-05-04 18:53:35.938287000 -0300
 @@ -0,0 +1,10 @@
 +#!/bin/bash
 +
@@ -3443,7 +3524,7 @@ diff -Naur '--exclude=certs' linux-5.0.3/copy_3ds.sh linux-3ds/copy_3ds.sh
 +EOF
 diff -Naur '--exclude=certs' linux-5.0.3/diff_3ds.sh linux-3ds/diff_3ds.sh
 --- linux-5.0.3/diff_3ds.sh	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/diff_3ds.sh	2019-03-26 11:47:26.282879100 -0300
++++ linux-3ds/diff_3ds.sh	2019-05-04 18:53:35.939283100 -0300
 @@ -0,0 +1,16 @@
 +#!/bin/sh
 +
@@ -3461,9 +3542,22 @@ diff -Naur '--exclude=certs' linux-5.0.3/diff_3ds.sh linux-3ds/diff_3ds.sh
 +cd linux-3ds/
 +
 +cp arch/arm/configs/nintendo3ds_defconfig .config
+diff -Naur '--exclude=certs' linux-5.0.3/drivers/mtd/spi-nor/spi-nor.c linux-3ds/drivers/mtd/spi-nor/spi-nor.c
+--- linux-5.0.3/drivers/mtd/spi-nor/spi-nor.c	2019-03-19 09:10:58.000000000 -0300
++++ linux-3ds/drivers/mtd/spi-nor/spi-nor.c	2019-05-08 11:38:57.602923200 -0300
+@@ -1938,6 +1938,9 @@
+ 	{ "m25p64",  INFO(0x202017,  0,  64 * 1024, 128, 0) },
+ 	{ "m25p128", INFO(0x202018,  0, 256 * 1024,  64, 0) },
+ 
++	/* HACKED ON TOP FOR NINTENDO 3DS - NEED TO FIND THE CORRECT INFO */
++	{ "m25something", INFO(0x20580C, 0, 64 * 1024, 2, 0)},
++
+ 	{ "m25p05-nonjedec",  INFO(0, 0,  32 * 1024,   2, 0) },
+ 	{ "m25p10-nonjedec",  INFO(0, 0,  32 * 1024,   4, 0) },
+ 	{ "m25p20-nonjedec",  INFO(0, 0,  64 * 1024,   4, 0) },
 diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/Kconfig linux-3ds/drivers/platform/Kconfig
 --- linux-5.0.3/drivers/platform/Kconfig	2019-03-19 09:10:58.000000000 -0300
-+++ linux-3ds/drivers/platform/Kconfig	2019-03-20 18:41:35.713494000 -0300
++++ linux-3ds/drivers/platform/Kconfig	2019-05-04 18:53:35.944280300 -0300
 @@ -5,6 +5,10 @@
  source "drivers/platform/mips/Kconfig"
  endif
@@ -3477,7 +3571,7 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/Kconfig linux-3ds/driv
  source "drivers/platform/chrome/Kconfig"
 diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/Makefile linux-3ds/drivers/platform/Makefile
 --- linux-5.0.3/drivers/platform/Makefile	2019-03-19 09:10:58.000000000 -0300
-+++ linux-3ds/drivers/platform/Makefile	2019-03-20 18:41:35.715488500 -0300
++++ linux-3ds/drivers/platform/Makefile	2019-05-04 18:53:35.946264800 -0300
 @@ -9,3 +9,4 @@
  obj-$(CONFIG_OLPC)		+= olpc/
  obj-$(CONFIG_GOLDFISH)		+= goldfish/
@@ -3485,8 +3579,8 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/Makefile linux-3ds/dri
 +obj-$(CONFIG_ARCH_NINTENDO3DS)	+= nintendo3ds/
 diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/Kconfig linux-3ds/drivers/platform/nintendo3ds/Kconfig
 --- linux-5.0.3/drivers/platform/nintendo3ds/Kconfig	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/drivers/platform/nintendo3ds/Kconfig	2019-03-20 18:41:35.716485400 -0300
-@@ -0,0 +1,127 @@
++++ linux-3ds/drivers/platform/nintendo3ds/Kconfig	2019-05-11 23:06:08.571854800 -0300
+@@ -0,0 +1,136 @@
 +#
 +# Nintendo 3DS Specific Drivers
 +#
@@ -3499,7 +3593,7 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/Kconfig li
 +	  Say Y here to get to use specific device drivers for the Nintendo 3DS
 +	  port.
 +
-+	  It's highly recommended to enable all of them.
++	  It's highly recommended to enable all of them as built-in.
 +
 +
 +if NINTENDO3DS_PLATFORM_DEVICES
@@ -3577,22 +3671,31 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/Kconfig li
 +	help
 +	  Real time clock device driver.
 +
-+config NINTENDO3DS_RESET
-+	tristate "Nintendo 3DS power control driver"
-+	depends on NINTENDO3DS_MCU
-+	select POWER_RESET
-+	default y
-+	help
-+	  Power off and restart device driver.
-+
-+config NINTENDO3DS_INFOLED
-+	tristate "Nintendo 3DS status LED driver"
++config NINTENDO3DS_LEDS
++	tristate "Nintendo 3DS status LEDs driver"
 +	depends on NINTENDO3DS_MCU
 +	select NEW_LEDS
 +	select LEDS_CLASS
 +	default y
 +	help
-+	  Notification LED device driver.
++	  Notification and power LED device driver.
++
++config NINTENDO3DS_RESET
++	tristate "Nintendo 3DS reboot/poweroff driver"
++	depends on NINTENDO3DS_MCU
++	select POWER_RESET
++	default y
++	help
++	  Reboot and poweroff device driver.
++
++config NINTENDO3DS_MCUHID
++	tristate "Nintendo 3DS MCU HID driver"
++	depends on NINTENDO3DS_MCU
++	select INPUT
++	default y
++	help
++	  Driver for extra buttons in the system
++	  (HOME, POWER, Wireless switch and lid state).
 +
 +config NINTENDO3DS_CHARGER
 +	tristate "Nintendo 3DS battery and AC driver"
@@ -3616,8 +3719,8 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/Kconfig li
 +endif # NINTENDO3DS_PLATFORM_DEVICES
 diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/Makefile linux-3ds/drivers/platform/nintendo3ds/Makefile
 --- linux-5.0.3/drivers/platform/nintendo3ds/Makefile	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/drivers/platform/nintendo3ds/Makefile	2019-03-20 18:41:35.717482600 -0300
-@@ -0,0 +1,17 @@
++++ linux-3ds/drivers/platform/nintendo3ds/Makefile	2019-05-11 23:04:05.764687600 -0300
+@@ -0,0 +1,18 @@
 +obj-$(CONFIG_NINTENDO3DS_HID)	+= nintendo3ds_input.o
 +
 +obj-$(CONFIG_NINTENDO3DS_SPI)	+= nintendo3ds_spi.o
@@ -3630,14 +3733,15 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/Makefile l
 +obj-$(CONFIG_NINTENDO3DS_I2C)	+= nintendo3ds_i2c.o
 +obj-$(CONFIG_NINTENDO3DS_MCU)	+= nintendo3ds_mcu.o
 +obj-$(CONFIG_NINTENDO3DS_RTC)	+= nintendo3ds_rtc.o
++obj-$(CONFIG_NINTENDO3DS_LEDS)	+= nintendo3ds_leds.o
 +obj-$(CONFIG_NINTENDO3DS_RESET)	+= nintendo3ds_reset.o
-+obj-$(CONFIG_NINTENDO3DS_INFOLED)	+= nintendo3ds_infoled.o
++obj-$(CONFIG_NINTENDO3DS_MCUHID)	+= nintendo3ds_mcuhid.o
 +obj-$(CONFIG_NINTENDO3DS_CHARGER)	+= nintendo3ds_charger.o
 +
 +obj-$(CONFIG_NINTENDO3DS_BACKLIGHT)	+= nintendo3ds_backlight.o
 diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3ds_backlight.c linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_backlight.c
 --- linux-5.0.3/drivers/platform/nintendo3ds/nintendo3ds_backlight.c	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_backlight.c	2019-03-20 18:41:35.719477600 -0300
++++ linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_backlight.c	2019-05-04 18:53:35.951250400 -0300
 @@ -0,0 +1,101 @@
 +/*
 + *  nintendo3ds_backlight.c
@@ -3742,7 +3846,7 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3d
 +
 diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3ds_charger.c linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_charger.c
 --- linux-5.0.3/drivers/platform/nintendo3ds/nintendo3ds_charger.c	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_charger.c	2019-03-20 18:41:35.720475200 -0300
++++ linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_charger.c	2019-05-07 12:38:54.241611700 -0300
 @@ -0,0 +1,152 @@
 +/*
 + *  nintendo3ds_charger.c
@@ -3757,10 +3861,10 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3d
 +#include <linux/of.h>
 +#include <linux/kernel.h>
 +#include <linux/module.h>
++#include <linux/regmap.h>
 +#include <linux/miscdevice.h>
 +#include <linux/power_supply.h>
 +#include <linux/platform_device.h>
-+#include <linux/mfd/nintendo3ds-mcu.h>
 +
 +#define DRIVER_NAME "nintendo3ds-charger"
 +
@@ -3771,11 +3875,11 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3d
 +        enum power_supply_property psp,
 +        union power_supply_propval *val)
 +{
-+    u8 batstat, cap;
-+    struct nintendo3ds_mcu_dev *mcu = power_supply_get_drvdata(psy);
++    unsigned int batstat, cap;
++    struct regmap *mcu_regmap = power_supply_get_drvdata(psy);
 +
-+    mcu->read_device(mcu, CAPACITY_REGISTER, sizeof(cap), &cap);
-+    mcu->read_device(mcu, CHRGSTAT_REGISTER, sizeof(batstat), &batstat);
++    regmap_read(mcu_regmap, CAPACITY_REGISTER, &cap);
++    regmap_read(mcu_regmap, CHRGSTAT_REGISTER, &batstat);
 +
 +    switch(psp) {
 +        case POWER_SUPPLY_PROP_ONLINE:
@@ -3806,10 +3910,10 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3d
 +        enum power_supply_property psp,
 +        union power_supply_propval *val)
 +{
-+    u8 acstat;
-+    struct nintendo3ds_mcu_dev *mcu = power_supply_get_drvdata(psy);
++    unsigned int acstat;
++    struct regmap *mcu_regmap = power_supply_get_drvdata(psy);
 +
-+    mcu->read_device(mcu, CHRGSTAT_REGISTER, sizeof(acstat), &acstat);
++    regmap_read(mcu_regmap, CHRGSTAT_REGISTER, &acstat);
 +
 +    switch(psp) {
 +        case POWER_SUPPLY_PROP_ONLINE:
@@ -3898,7 +4002,7 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3d
 +MODULE_ALIAS("mfd:" DRIVER_NAME);
 diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3ds_codec.c linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_codec.c
 --- linux-5.0.3/drivers/platform/nintendo3ds/nintendo3ds_codec.c	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_codec.c	2019-03-20 18:41:35.721474700 -0300
++++ linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_codec.c	2019-05-04 18:53:35.955240200 -0300
 @@ -0,0 +1,548 @@
 +/*
 + * nintendo3ds_codec.c
@@ -4450,8 +4554,8 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3d
 +MODULE_ALIAS("spi:" DRIVER_NAME);
 diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3ds_i2c.c linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_i2c.c
 --- linux-5.0.3/drivers/platform/nintendo3ds/nintendo3ds_i2c.c	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_i2c.c	2019-03-20 18:41:35.721474700 -0300
-@@ -0,0 +1,227 @@
++++ linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_i2c.c	2019-05-11 12:11:12.073410700 -0300
+@@ -0,0 +1,242 @@
 +/*
 + *  nintendo3ds_i2c.c
 + *
@@ -4462,14 +4566,14 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3d
 + * it under the terms of the GNU General Public License version 2 as
 + * published by the Free Software Foundation.
 + */
++
++#include <linux/io.h>
++#include <linux/i2c.h>
++#include <linux/init.h>
++#include <linux/slab.h>
 +#include <linux/kernel.h>
 +#include <linux/module.h>
-+#include <linux/i2c.h>
-+#include <linux/i2c-algo-bit.h>
-+#include <linux/init.h>
 +#include <linux/platform_device.h>
-+#include <linux/slab.h>
-+#include <linux/io.h>
 +
 +#define DRIVER_NAME "nintendo3ds-i2c"
 +
@@ -4483,7 +4587,7 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3d
 +#define I2C_CNT_STOP	(1 << 0)
 +#define I2C_CNT_START	(1 << 1)
 +#define I2C_CNT_PAUSE	(1 << 2)
-+#define I2C_CNT_ACK	(1 << 4)
++#define I2C_CNT_ACK		(1 << 4)
 +#define I2C_CNT_DATADIR	(1 << 5)
 +#define I2C_CNT_INTEN	(1 << 6)
 +#define I2C_CNT_STAT	(1 << 7)
@@ -4500,17 +4604,17 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3d
 +#define I2C_GET_DATA_REG(base)		(readb(base + I2C_REG_DATA_OFF))
 +#define I2C_SET_CNT_REG(base,val)	(writeb(val, base + I2C_REG_CNT_OFF))
 +#define I2C_GET_CNT_REG(base)		(readb(base + I2C_REG_CNT_OFF))
-+#define I2C_SET_CNTEX_REG(base,val)	(writeb(val, base + I2C_REG_CNTEX_OFF))
-+#define I2C_GET_CNTEX_REG(base)		(readb(base + I2C_REG_CNTEX_OFF))
-+#define I2C_SET_SCL_REG(base,val)	(writeb(val, base + I2C_REG_SCL_OFF))
-+#define I2C_GET_SCL_REG(base)		(readb(base + I2C_REG_SCL_OFF))
-+
++#define I2C_SET_CNTEX_REG(base,val)	(writew(val, base + I2C_REG_CNTEX_OFF))
++#define I2C_GET_CNTEX_REG(base)		(readw(base + I2C_REG_CNTEX_OFF))
++#define I2C_SET_SCL_REG(base,val)	(writew(val, base + I2C_REG_SCL_OFF))
++#define I2C_GET_SCL_REG(base)		(readw(base + I2C_REG_SCL_OFF))
 +#define I2C_BUS_IS_BUSY(base)		(I2C_GET_CNT_REG(base) & I2C_CNT_STAT_BUSY)
 +
 +
 +struct nintendo3ds_i2c {
-+	struct i2c_adapter	 adap;
-+	void __iomem		 *base;
++	unsigned irq;
++	void __iomem *base;
++	struct i2c_adapter adap;
 +};
 +
 +static inline void i2c_wait_busy(void __iomem *base)
@@ -4578,11 +4682,27 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3d
 +	return 0;
 +}
 +
-+static int nintendo3ds_i2c_xfer(struct i2c_adapter *adap,
++static int nintendo3ds_i2c_master_xfer(struct i2c_adapter *adap,
 +			struct i2c_msg *msgs, int num)
 +{
 +	struct nintendo3ds_i2c *i2c = adap->algo_data;
 +	int i, ret = 0;
++
++	if (num == 1 && msgs[0].len > 1) {
++		// HACK - needs to be fixed
++		struct i2c_msg xfer[2];
++		xfer[0].addr = msgs->addr;
++		xfer[0].flags = 0;
++		xfer[0].len = 1;
++		xfer[0].buf = msgs->buf;
++
++		xfer[1].addr = msgs->addr;
++		xfer[1].flags = msgs->flags;
++		xfer[1].len = msgs->len - 1;
++		xfer[1].buf = (u8*)msgs->buf + 1;
++
++		return nintendo3ds_i2c_master_xfer(adap, xfer, 2);
++	}
 +
 +	for (i = 0; i < num; i++, msgs++) {
 +		ret = nintendo3ds_i2c_xfer_msg(i2c, msgs, (i == 0));
@@ -4595,11 +4715,11 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3d
 +
 +static u32 nintendo3ds_i2c_func(struct i2c_adapter *adap)
 +{
-+	return I2C_FUNC_I2C | I2C_FUNC_SMBUS_EMUL;
++	return I2C_FUNC_I2C;
 +}
 +
-+static const struct i2c_algorithm nintendo3ds_i2c_algorithm = {
-+	.master_xfer	= nintendo3ds_i2c_xfer,
++static const struct i2c_algorithm nintendo3ds_i2c_algo = {
++	.master_xfer	= nintendo3ds_i2c_master_xfer,
 +	.functionality	= nintendo3ds_i2c_func,
 +};
 +
@@ -4610,27 +4730,26 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3d
 +	int ret;
 +
 +	i2c = devm_kzalloc(&pdev->dev, sizeof(*i2c), GFP_KERNEL);
-+	if (IS_ERR(i2c)) {
-+		dev_err(&pdev->dev, "failed to allocate driver");
++	if (IS_ERR(i2c))
 +		return PTR_ERR(i2c);
-+	}
-+
-+	platform_set_drvdata(pdev, i2c);
 +
 +	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-+	if (IS_ERR(mem)) {
-+		dev_err(&pdev->dev, "failed to get memory resource");
++	if (IS_ERR(mem))
 +		return PTR_ERR(mem);
-+	}
 +
 +	i2c->base = devm_ioremap_resource(&pdev->dev, mem);
-+	if (IS_ERR(i2c->base)) {
-+		dev_err(&pdev->dev, "failed to map registers");
++	if (IS_ERR(i2c->base))
 +		return PTR_ERR(i2c->base);
-+	}
 +
-+	/* Disable any possibly running I2C xfer */
++	//i2c->irq = platform_get_irq(pdev, 0);
++	//if (!i2c->irq)
++	//	return -EINVAL;
++
++	/* hardware reset */
 +	I2C_SET_CNT_REG(i2c->base, 0);
++	I2C_SET_CNTEX_REG(i2c->base, 2);
++	I2C_SET_SCL_REG(i2c->base, 1280);
++	i2c_wait_busy(i2c->base);
 +
 +	/* Setup the i2c_adapter */
 +	i2c->adap.owner		= THIS_MODULE;
@@ -4638,14 +4757,14 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3d
 +		sizeof(i2c->adap.name));
 +	i2c->adap.dev.parent 	= &pdev->dev;
 +	i2c->adap.dev.of_node	= pdev->dev.of_node;
-+	i2c->adap.algo		= &nintendo3ds_i2c_algorithm;
++	i2c->adap.algo		= &nintendo3ds_i2c_algo;
 +	i2c->adap.algo_data	= i2c;
 +
++	platform_set_drvdata(pdev, i2c);
++
 +	ret = i2c_add_adapter(&i2c->adap);
-+	if (ret < 0) {
-+		dev_err(&pdev->dev, "failed to add adapter (%d)", ret);
++	if (ret < 0)
 +		return ret;
-+	}
 +	return 0;
 +}
 +
@@ -4679,156 +4798,9 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3d
 +MODULE_AUTHOR("Sergi Granell, <xerpi.g.12@gmail.com>");
 +MODULE_LICENSE("GPL");
 +MODULE_ALIAS("platform:" DRIVER_NAME);
-diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3ds_infoled.c linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_infoled.c
---- linux-5.0.3/drivers/platform/nintendo3ds/nintendo3ds_infoled.c	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_infoled.c	2019-03-20 18:41:35.723467200 -0300
-@@ -0,0 +1,143 @@
-+/*
-+ * nintendo3ds_infoled.c
-+ *
-+ * Copyright (C) 2018 Wolfvak
-+ * Information gathered from http://3dbrew.org/wiki/MCURTC:SetInfoLEDPattern
-+ *
-+ * This program is free software; you can redistribute it and/or modify
-+ * it under the terms of the GNU General Public License version 2 as
-+ * published by the Free Software Foundation.
-+ */
-+
-+#include <linux/of.h>
-+#include <linux/init.h>
-+#include <linux/leds.h>
-+#include <linux/kernel.h>
-+#include <linux/module.h>
-+#include <linux/device.h>
-+#include <linux/platform_device.h>
-+#include <linux/mfd/nintendo3ds-mcu.h>
-+
-+#define DRIVER_NAME "nintendo3ds-infoled"
-+
-+#define INFOLED_REGISTER	0x2D
-+
-+struct nintendo3ds_led_regstate {
-+	u8 delay;
-+	u8 smoothing;
-+	u8 loop_delay;
-+	u8 unknown;
-+
-+	u8 color[3][32];
-+} __attribute__((packed));
-+
-+/*
-+ * ugly containerization hack is ugly, because
-+ * LED devices dont get any private data to use
-+ */
-+struct nintendo3ds_infoled_cont {
-+	unsigned int id;
-+	struct led_classdev led;
-+};
-+
-+struct nintendo3ds_infoled {
-+	struct nintendo3ds_mcu_dev *mcu;
-+	struct nintendo3ds_infoled_cont cont[3];
-+	struct nintendo3ds_led_regstate led_regstate;
-+};
-+
-+static const char *nintendo3ds_infoled_colors[] = {
-+	"nintendo3ds:red:notification",
-+	"nintendo3ds:green:notification",
-+	"nintendo3ds:blue:notification",
-+};
-+
-+/*
-+ * Whenever there's a proper interface for programmable RGB LEDs, I'll update
-+ * the code to reflect this, since the LED interface on the 3DS is flexible.
-+ *
-+ * Right now, it'll remain as three static LEDs that get mixed together.
-+ */
-+static int nintendo3ds_infoled_setbrightness(struct led_classdev *led_cdev,
-+												enum led_brightness brightness)
-+{
-+	int i, led_id;
-+	struct nintendo3ds_mcu_dev *mcu;
-+	struct nintendo3ds_infoled *infoled;
-+	struct nintendo3ds_led_regstate *regs;
-+	struct nintendo3ds_infoled_cont *cont;
-+
-+	cont = container_of(led_cdev, struct nintendo3ds_infoled_cont, led);
-+
-+	led_id = cont->id;
-+	if (led_id > 3)
-+		return -EINVAL;
-+
-+	infoled = container_of(cont, struct nintendo3ds_infoled, cont[led_id]);
-+	regs = &infoled->led_regstate;
-+	mcu = infoled->mcu;
-+
-+	brightness = (brightness == LED_ON) ? LED_FULL : brightness;
-+	for (i = 0; i < 32; i++)
-+		regs->color[led_id][i] = brightness;
-+
-+	mcu->write_device(mcu, INFOLED_REGISTER, sizeof(*regs), regs);
-+	return 0;
-+}
-+
-+static int nintendo3ds_infoled_probe(struct platform_device *pdev)
-+{
-+	int i, res;
-+	struct nintendo3ds_infoled *infoled;
-+
-+	infoled = devm_kzalloc(&pdev->dev, sizeof(*infoled), GFP_KERNEL);
-+	if (IS_ERR(infoled)) {
-+		dev_err(&pdev->dev, "failed to allocate driver");
-+		return PTR_ERR(infoled);
-+	}
-+
-+	/* set up LEDs structure information */
-+	infoled->mcu = dev_get_drvdata(pdev->dev.parent);
-+
-+	/* set up LED class devices */
-+	for (i = 0; i < 3; i++) {
-+		struct nintendo3ds_infoled_cont *cont;
-+		struct led_classdev *led;
-+
-+		cont = &infoled->cont[i];
-+		led = &cont->led;
-+
-+		cont->id = i;
-+		led->name = nintendo3ds_infoled_colors[i];
-+		led->brightness_set_blocking = nintendo3ds_infoled_setbrightness;
-+
-+		res = devm_led_classdev_register(&pdev->dev, led);
-+		if (res < 0) {
-+			dev_warn(&pdev->dev, "failed to register led device (%d)", res);
-+			break;
-+		}
-+	}
-+
-+	return res;
-+}
-+
-+static const struct of_device_id nintendo3ds_infoled_of_match[] = {
-+    { .compatible = "nintendo3ds," DRIVER_NAME, },
-+    {}
-+};
-+MODULE_DEVICE_TABLE(of, nintendo3ds_infoled_of_match);
-+
-+static struct platform_driver nintendo3ds_infoled_driver = {
-+    .probe = nintendo3ds_infoled_probe,
-+
-+    .driver = {
-+        .name = DRIVER_NAME,
-+        .owner = THIS_MODULE,
-+        .of_match_table = of_match_ptr(nintendo3ds_infoled_of_match),
-+    },
-+};
-+module_platform_driver(nintendo3ds_infoled_driver);
-+
-+MODULE_AUTHOR("Wolfvak");
-+MODULE_DESCRIPTION("Nintendo 3DS notification LED driver");
-+MODULE_LICENSE("GPL");
 diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3ds_input.c linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_input.c
 --- linux-5.0.3/drivers/platform/nintendo3ds/nintendo3ds_input.c	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_input.c	2019-03-20 18:41:35.724465200 -0300
++++ linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_input.c	2019-05-04 18:53:35.964231000 -0300
 @@ -0,0 +1,189 @@
 +/*
 + *  nintendo3ds_input.c
@@ -5019,157 +4991,256 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3d
 +MODULE_AUTHOR("Sergi Granell, <xerpi.g.12@gmail.com>");
 +MODULE_LICENSE("GPL");
 +MODULE_ALIAS("platform:" DRIVER_NAME);
-diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3ds_mcu.c linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_mcu.c
---- linux-5.0.3/drivers/platform/nintendo3ds/nintendo3ds_mcu.c	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_mcu.c	2019-03-20 18:41:35.725461800 -0300
-@@ -0,0 +1,184 @@
+diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3ds_leds.c linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_leds.c
+--- linux-5.0.3/drivers/platform/nintendo3ds/nintendo3ds_leds.c	1969-12-31 21:00:00.000000000 -0300
++++ linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_leds.c	2019-05-09 19:32:55.783254800 -0300
+@@ -0,0 +1,143 @@
 +/*
-+ * nintendo3ds_mcu.c
++ * nintendo3ds_led.c
 + *
-+ *  Copyright (C) 2016 Sergi Granell <xerpi.g.12@gmail.com>
++ * Copyright (C) 2018 Wolfvak
++ * Information gathered from http://3dbrew.org/wiki/MCURTC:SetInfoLEDPattern
 + *
-+ * Credits:
-+ *
-+ *    Using code from tps6507x.c
-+ *
-+ * For licencing details see kernel-base/COPYING
-+ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software Foundation.
 + */
 +
-+#include <linux/module.h>
-+#include <linux/moduleparam.h>
-+#include <linux/init.h>
-+#include <linux/slab.h>
-+#include <linux/i2c.h>
 +#include <linux/of.h>
-+#include <linux/of_device.h>
-+#include <linux/mfd/core.h>
-+#include <linux/mfd/nintendo3ds-mcu.h>
++#include <linux/init.h>
++#include <linux/leds.h>
++#include <linux/kernel.h>
++#include <linux/module.h>
++#include <linux/device.h>
++#include <linux/regmap.h>
++#include <linux/platform_device.h>
 +
-+#define DRIVER_NAME "nintendo3ds-mcu"
++#define DRIVER_NAME "nintendo3ds-leds"
 +
-+#define MAX_MCU_DEVS 8
-+static struct mfd_cell nintendo3ds_mcu_devs[MAX_MCU_DEVS];
++#define INFOLED_REGISTER	0x2D
 +
-+static int nintendo3ds_mcu_i2c_read_device(struct nintendo3ds_mcu_dev *nintendo3ds_mcu, char reg,
-+				  int bytes, void *dest)
++struct nintendo3ds_led_regstate {
++	u8 delay;
++	u8 smoothing;
++	u8 loop_delay;
++	u8 unknown;
++
++	u8 color[3][32];
++} __attribute__((packed));
++
++/*
++ * ugly containerization hack is ugly, because
++ * LED devices dont get any private data to use
++ */
++struct nintendo3ds_led_cont {
++	unsigned int id;
++	struct led_classdev led;
++};
++
++struct nintendo3ds_leds {
++	struct regmap *mcu_regmap;
++	struct nintendo3ds_led_cont cont[3];
++	struct nintendo3ds_led_regstate led_regstate;
++};
++
++static const char *nintendo3ds_led_colors[] = {
++	"nintendo3ds:red:status",
++	"nintendo3ds:green:status",
++	"nintendo3ds:blue:status",
++};
++
++/*
++ * Whenever there's a proper interface for programmable RGB LEDs, I'll update
++ * the code to reflect this, since the LED interface on the 3DS is flexible.
++ *
++ * Right now, it'll remain as three static LEDs that get mixed together.
++ */
++static int nintendo3ds_leds_setbrightness(struct led_classdev *led_cdev,
++												enum led_brightness brightness)
 +{
-+	struct i2c_client *i2c = nintendo3ds_mcu->i2c_client;
-+	struct i2c_msg xfer[2];
-+	int ret;
++	int i, led_id;
++	struct regmap *mcu_regmap;
++	struct nintendo3ds_leds *leds;
++	struct nintendo3ds_led_cont *cont;
++	struct nintendo3ds_led_regstate *regs;
 +
-+	/* Select register */
-+	xfer[0].addr = i2c->addr;
-+	xfer[0].flags = 0;
-+	xfer[0].len = sizeof(reg);
-+	xfer[0].buf = &reg;
++	cont = container_of(led_cdev, struct nintendo3ds_led_cont, led);
 +
-+	/* Read data */
-+	xfer[1].addr = i2c->addr;
-+	xfer[1].flags = I2C_M_RD;
-+	xfer[1].len = bytes;
-+	xfer[1].buf = dest;
++	led_id = cont->id;
++	if (led_id > 3)
++		return -EINVAL;
 +
-+	ret = i2c_transfer(i2c->adapter, xfer, 2);
-+	if (ret == 2)
-+		ret = 0;
-+	else if (ret >= 0)
-+		ret = -EIO;
++	leds = container_of(cont, struct nintendo3ds_leds, cont[led_id]);
++	regs = &leds->led_regstate;
++	mcu_regmap = leds->mcu_regmap;
 +
-+	return ret;
-+}
++	brightness = (brightness == LED_ON) ? LED_FULL : brightness;
++	for (i = 0; i < 32; i++)
++		regs->color[led_id][i] = brightness;
 +
-+static int nintendo3ds_mcu_i2c_write_device(struct nintendo3ds_mcu_dev *nintendo3ds_mcu, char reg,
-+				   int bytes, void *src)
-+{
-+	struct i2c_client *i2c = nintendo3ds_mcu->i2c_client;
-+	struct i2c_msg xfer[2];
-+	int ret;
-+
-+	/* Select register */
-+	xfer[0].addr = i2c->addr;
-+	xfer[0].flags = 0;
-+	xfer[0].len = sizeof(reg);
-+	xfer[0].buf = &reg;
-+
-+	/* Write data */
-+	xfer[1].addr = i2c->addr;
-+	xfer[1].flags = 0;
-+	xfer[1].len = bytes;
-+	xfer[1].buf = src;
-+
-+	ret = i2c_transfer(i2c->adapter, xfer, 2);
-+	if (ret == 2)
-+		ret = 0;
-+	else if (ret >= 0)
-+		ret = -EIO;
-+
-+	return ret;
-+}
-+
-+static int nintendo3ds_mcu_i2c_probe(struct i2c_client *i2c,
-+			    const struct i2c_device_id *id)
-+{
-+	int devcnt;
-+	struct device *dev;
-+	struct device_node *child;
-+	struct nintendo3ds_mcu_dev *nintendo3ds_mcu;
-+
-+	dev = &i2c->dev;
-+
-+	nintendo3ds_mcu = devm_kzalloc(dev, sizeof(struct nintendo3ds_mcu_dev),
-+				GFP_KERNEL);
-+
-+	if (IS_ERR(nintendo3ds_mcu)) {
-+		dev_err(dev, "failed to allocate driver");
-+		return PTR_ERR(nintendo3ds_mcu);
-+	}
-+
-+	i2c_set_clientdata(i2c, nintendo3ds_mcu);
-+	nintendo3ds_mcu->dev = dev;
-+	nintendo3ds_mcu->i2c_client = i2c;
-+	nintendo3ds_mcu->read_device = nintendo3ds_mcu_i2c_read_device;
-+	nintendo3ds_mcu->write_device = nintendo3ds_mcu_i2c_write_device;
-+
-+	devcnt = 0;
-+	for_each_child_of_node(dev->of_node, child) {
-+		const void *of_compat;
-+		struct mfd_cell *mcu_dev = &nintendo3ds_mcu_devs[devcnt];
-+
-+		if (child->name == NULL) {
-+			dev_warn(dev, "child with no name? ignoring");
-+			continue;
-+		}
-+
-+		of_compat = of_get_property(child, "compatible", NULL);
-+		if (of_compat == NULL) {
-+			dev_err(dev, "child %s contains no compatible field", child->name);
-+			continue;
-+		}
-+
-+		mcu_dev->name = child->name;
-+		mcu_dev->of_compatible = of_compat;
-+
-+		if (++devcnt >= MAX_MCU_DEVS)
-+			break;
-+	}
-+
-+	return mfd_add_devices(nintendo3ds_mcu->dev, -1, nintendo3ds_mcu_devs,
-+							devcnt, NULL, 0, NULL);
-+}
-+
-+static int nintendo3ds_mcu_i2c_remove(struct i2c_client *i2c)
-+{
-+	struct nintendo3ds_mcu_dev *nintendo3ds_mcu = i2c_get_clientdata(i2c);
-+	mfd_remove_devices(nintendo3ds_mcu->dev);
++	regmap_raw_write(mcu_regmap, INFOLED_REGISTER, regs, sizeof(*regs));
 +	return 0;
 +}
 +
-+static const struct i2c_device_id nintendo3ds_mcu_i2c_id[] = {
++static int nintendo3ds_infoled_probe(struct platform_device *pdev)
++{
++	int i, res;
++	struct nintendo3ds_leds *leds;
++
++	leds = devm_kzalloc(&pdev->dev, sizeof(*leds), GFP_KERNEL);
++	if (IS_ERR(leds)) {
++		dev_err(&pdev->dev, "failed to allocate driver");
++		return PTR_ERR(leds);
++	}
++
++	/* set up LEDs structure information */
++	leds->mcu_regmap = dev_get_drvdata(pdev->dev.parent);
++
++	/* set up LED class devices */
++	for (i = 0; i < 3; i++) {
++		struct nintendo3ds_led_cont *cont;
++		struct led_classdev *led;
++
++		cont = &leds->cont[i];
++		led = &cont->led;
++
++		cont->id = i;
++		led->name = nintendo3ds_led_colors[i];
++		led->brightness_set_blocking = nintendo3ds_leds_setbrightness;
++
++		res = devm_led_classdev_register(&pdev->dev, led);
++		if (res < 0) {
++			dev_warn(&pdev->dev, "failed to register led device (%d)", res);
++			break;
++		}
++	}
++
++	return res;
++}
++
++static const struct of_device_id nintendo3ds_infoled_of_match[] = {
++    { .compatible = "nintendo3ds," DRIVER_NAME, },
++    {}
++};
++MODULE_DEVICE_TABLE(of, nintendo3ds_infoled_of_match);
++
++static struct platform_driver nintendo3ds_infoled_driver = {
++    .probe = nintendo3ds_infoled_probe,
++
++    .driver = {
++        .name = DRIVER_NAME,
++        .owner = THIS_MODULE,
++        .of_match_table = of_match_ptr(nintendo3ds_infoled_of_match),
++    },
++};
++module_platform_driver(nintendo3ds_infoled_driver);
++
++MODULE_AUTHOR("Wolfvak");
++MODULE_DESCRIPTION("Nintendo 3DS notification LED driver");
++MODULE_LICENSE("GPL");
+diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3ds_mcu.c linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_mcu.c
+--- linux-5.0.3/drivers/platform/nintendo3ds/nintendo3ds_mcu.c	1969-12-31 21:00:00.000000000 -0300
++++ linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_mcu.c	2019-05-11 23:43:56.963635100 -0300
+@@ -0,0 +1,135 @@
++/*
++ * nintendo3ds_mcu.c
++ *
++ * Copyright (C) 2019 Wolfvak
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software Foundation.
++ */
++
++#include <linux/of.h>
++#include <linux/i2c.h>
++#include <linux/init.h>
++#include <linux/slab.h>
++#include <linux/regmap.h>
++#include <linux/module.h>
++#include <linux/of_device.h>
++#include <linux/miscdevice.h>
++
++#define DRIVER_NAME "nintendo3ds-mcu"
++
++static const struct regmap_range mcu_readable[] = {
++	regmap_reg_range(0, 0x1F),
++	regmap_reg_range(0x24, 0x2C),
++	regmap_reg_range(0x2E, 0x2E),
++	regmap_reg_range(0x30, 0x3E),
++	regmap_reg_range(0x40, 0x4B),
++	regmap_reg_range(0x7F, 0x7F),
++};
++static const struct regmap_access_table mcu_readable_table = {
++	.yes_ranges = mcu_readable,
++	.n_yes_ranges = ARRAY_SIZE(mcu_readable),
++};
++
++static const struct regmap_range mcu_writeable[] = {
++	regmap_reg_range(0x10, 0x13),
++	regmap_reg_range(0x18, 0x22),
++	regmap_reg_range(0x27, 0x2D),
++	regmap_reg_range(0x2F, 0x3B),
++	regmap_reg_range(0x7F, 0x7F),
++};
++static const struct regmap_access_table mcu_writeable_table = {
++	.yes_ranges = mcu_writeable,
++	.n_yes_ranges = ARRAY_SIZE(mcu_writeable),
++};
++
++static const struct regmap_range mcu_all[] = {
++	regmap_reg_range(0, 0x7F),
++};
++
++static const struct regmap_access_table mcu_all_table = {
++	.yes_ranges = mcu_all,
++	.n_yes_ranges = ARRAY_SIZE(mcu_all),
++};
++
++static const struct regmap_range mcu_noinc[] = {
++	regmap_reg_range(0x2D, 0x2D),
++};
++static const struct regmap_access_table mcu_noinc_table = {
++	.yes_ranges = mcu_noinc,
++	.n_yes_ranges = ARRAY_SIZE(mcu_noinc),
++};
++
++
++static const struct regmap_config regmap_mcu_cfg = {
++	.name = "n3ds_mcuregmap",
++	.reg_bits = 8,
++	.val_bits = 8,
++	.max_register = 0x7F,
++
++	.fast_io = true,
++
++	.rd_table = &mcu_readable_table,
++	.wr_table = &mcu_writeable_table,
++
++	.volatile_table = &mcu_all_table,
++	.precious_table = &mcu_all_table,
++
++	.wr_noinc_table = &mcu_noinc_table,
++	.rd_noinc_table = &mcu_noinc_table,
++};
++
++static int nintendo3ds_mcu_probe(struct i2c_client *i2c,
++					const struct i2c_device_id *id)
++{
++	struct device *dev = &i2c->dev;
++	struct regmap *mcu_regmap = devm_regmap_init_i2c(i2c, &regmap_mcu_cfg);
++	if (IS_ERR(mcu_regmap))
++		return PTR_ERR(mcu_regmap);
++
++	i2c_set_clientdata(i2c, mcu_regmap);
++	return devm_of_platform_populate(dev);
++}
++
++static const struct i2c_device_id nintendo3ds_mcu_id[] = {
 +       { DRIVER_NAME, 0 },
 +       { }
 +};
-+MODULE_DEVICE_TABLE(i2c, nintendo3ds_mcu_i2c_id);
++MODULE_DEVICE_TABLE(i2c, nintendo3ds_mcu_id);
 +
 +#ifdef CONFIG_OF
 +static const struct of_device_id nintendo3ds_mcu_of_match[] = {
@@ -5179,10 +5250,9 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3d
 +MODULE_DEVICE_TABLE(of, nintendo3ds_mcu_of_match);
 +#endif
 +
-+static struct i2c_driver nintendo3ds_mcu_i2c_driver = {
-+	.probe = nintendo3ds_mcu_i2c_probe,
-+	.remove = nintendo3ds_mcu_i2c_remove,
-+	.id_table = nintendo3ds_mcu_i2c_id,
++static struct i2c_driver nintendo3ds_mcu_driver = {
++	.probe = nintendo3ds_mcu_probe,
++	.id_table = nintendo3ds_mcu_id,
 +
 +	.driver = {
 +		   .name = DRIVER_NAME,
@@ -5191,25 +5261,197 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3d
 +	},
 +};
 +
-+static int __init nintendo3ds_mcu_i2c_init(void)
++static int __init nintendo3ds_mcu_init(void)
 +{
-+	return i2c_add_driver(&nintendo3ds_mcu_i2c_driver);
++	return i2c_add_driver(&nintendo3ds_mcu_driver);
 +}
 +/* init early so consumer devices can complete system boot */
-+subsys_initcall(nintendo3ds_mcu_i2c_init);
++subsys_initcall(nintendo3ds_mcu_init);
 +
-+static void __exit nintendo3ds_mcu_i2c_exit(void)
++static void __exit nintendo3ds_mcu_exit(void)
 +{
-+	i2c_del_driver(&nintendo3ds_mcu_i2c_driver);
++	i2c_del_driver(&nintendo3ds_mcu_driver);
 +}
-+module_exit(nintendo3ds_mcu_i2c_exit);
++module_exit(nintendo3ds_mcu_exit);
 +
-+MODULE_DESCRIPTION("Nintendo 3DS MCU multi-function driver");
-+MODULE_AUTHOR("Sergi Granell, <xerpi.g.12@gmail.com>");
++MODULE_DESCRIPTION("Nintendo 3DS MCU system controller");
++MODULE_AUTHOR("Wolfvak");
 +MODULE_LICENSE("GPL");
+diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3ds_mcuhid.c linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_mcuhid.c
+--- linux-5.0.3/drivers/platform/nintendo3ds/nintendo3ds_mcuhid.c	1969-12-31 21:00:00.000000000 -0300
++++ linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_mcuhid.c	2019-05-11 19:28:42.006770400 -0300
+@@ -0,0 +1,168 @@
++/*
++ *  nintendo3ds_mcuhid.c
++ *
++ *  Copyright (C) 2019 Wolfvak
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software Foundation.
++ */
++
++#include <linux/of.h>
++#include <linux/slab.h>
++#include <linux/init.h>
++#include <linux/input.h>
++#include <linux/module.h>
++#include <linux/regmap.h>
++#include <linux/workqueue.h>
++#include <linux/interrupt.h>
++#include <linux/irqdomain.h>
++#include <linux/of_address.h>
++#include <linux/platform_device.h>
++
++#define DRIVER_NAME "nintendo3ds-mcuhid"
++
++#define BTN_PWR_DOWN	BIT(0)
++#define BTN_PWR_HOLD	BIT(1)
++#define BTN_HOME_DOWN	BIT(2)
++#define BTN_WIFI_SWITCH	BIT(4)
++#define BTN_SHELL_CLOSE	BIT(5)
++
++#define BTN_MCU_ALL	\
++	(BTN_PWR_DOWN | BTN_PWR_HOLD | BTN_HOME_DOWN | \
++		BTN_WIFI_SWITCH | BTN_SHELL_CLOSE)
++
++#define MCU_MASK_REGISTER	(0x10)
++#define MCU_ACK_REGISTER	(0x18)
++
++struct nintendo3ds_mcuhid {
++	unsigned irq;
++	struct input_dev *input;
++	struct regmap *mcu_regmap;
++
++	struct work_struct work;
++};
++
++static const struct {
++	unsigned int in, out;
++} mcuhid_mappings[] = {
++	{BTN_PWR_DOWN, KEY_SUSPEND},
++	{BTN_PWR_HOLD, KEY_POWER},
++	{BTN_HOME_DOWN, KEY_HOME},
++	{BTN_WIFI_SWITCH, KEY_WWAN},
++	{BTN_SHELL_CLOSE, SW_LID},
++};
++
++static void nintendo3ds_mcuhid_report(struct work_struct *work)
++{
++	int i;
++	u32 mask;
++	struct nintendo3ds_mcuhid *mcuhid =
++		container_of(work, struct nintendo3ds_mcuhid, work);
++
++	regmap_raw_read(mcuhid->mcu_regmap, MCU_ACK_REGISTER,
++		&mask, sizeof(mask));
++
++	for (i = 0; i < ARRAY_SIZE(mcuhid_mappings); i++)
++		input_report_key(mcuhid->input, mcuhid_mappings[i].out,
++			mcuhid_mappings[i].in & mask);
++
++	input_sync(mcuhid->input);
++}
++
++static void nintendo3ds_mcuhid_setmask(struct nintendo3ds_mcuhid *mcuhid,
++										unsigned int mask)
++{
++	mask = ~mask;
++	regmap_raw_write(mcuhid->mcu_regmap, MCU_MASK_REGISTER,
++		&mask, sizeof(mask));
++}
++
++static irqreturn_t nintendo3ds_mcuhid_interrupt(int irq, void *priv)
++{
++	struct nintendo3ds_mcuhid *mcuhid = priv;
++	schedule_work(&mcuhid->work);
++	return IRQ_HANDLED;
++}
++
++static int nintendo3ds_mcuhid_probe(struct platform_device *pdev)
++{
++	int err, i;
++	unsigned irq;
++	struct input_dev *input;
++	struct regmap *mcu_regmap;
++	struct nintendo3ds_mcuhid *mcuhid;
++
++	mcu_regmap = dev_get_drvdata(pdev->dev.parent);
++	irq = platform_get_irq(pdev, 0);
++	if (!irq)
++		return -EINVAL;
++
++	mcuhid = devm_kzalloc(&pdev->dev, sizeof(*mcuhid), GFP_KERNEL);
++	if (IS_ERR(mcuhid))
++		return PTR_ERR(mcuhid);
++
++	mcuhid->mcu_regmap = mcu_regmap;
++	mcuhid->irq = irq;
++	INIT_WORK(&mcuhid->work, nintendo3ds_mcuhid_report);
++
++	input = devm_input_allocate_device(&pdev->dev);
++	input->name = "Nintendo 3DS MCU input";
++	input->id.bustype = BUS_HOST;
++	input->dev.parent = &pdev->dev;
++
++	mcuhid->input = input;
++
++	// enable all buttons
++	nintendo3ds_mcuhid_setmask(mcuhid, BTN_MCU_ALL);
++
++	set_bit(EV_KEY, input->evbit);
++	for (i = 0; i < ARRAY_SIZE(mcuhid_mappings); i++)
++		set_bit(mcuhid_mappings[i].out, input->keybit);
++
++	err = input_register_device(input);
++	if (err)
++		return err;
++
++	err = devm_request_irq(&pdev->dev, irq, nintendo3ds_mcuhid_interrupt,
++							0, "mcu_hid", mcuhid);
++	if (err) {
++		input_unregister_device(input);
++		return err;
++	}
++
++	platform_set_drvdata(pdev, mcuhid);
++	return 0;
++}
++
++static int nintendo3ds_mcuhid_remove(struct platform_device *pdev)
++{
++	struct nintendo3ds_mcuhid *mcuhid = platform_get_drvdata(pdev);
++	devm_free_irq(&pdev->dev, mcuhid->irq, mcuhid);
++	input_unregister_device(mcuhid->input);
++	return 0;
++}
++
++static const struct of_device_id nintendo3ds_mcuhid_of_match[] = {
++	{ .compatible = "nintendo3ds," DRIVER_NAME, },
++	{},
++};
++MODULE_DEVICE_TABLE(of, nintendo3ds_mcuhid_of_match);
++
++static struct platform_driver nintendo3ds_mcuhid_driver = {
++	.probe	= nintendo3ds_mcuhid_probe,
++	.remove	= nintendo3ds_mcuhid_remove,
++
++	.driver	= {
++		.name = DRIVER_NAME,
++		.owner = THIS_MODULE,
++		.of_match_table = nintendo3ds_mcuhid_of_match,
++	},
++};
++
++module_platform_driver(nintendo3ds_mcuhid_driver);
++
++MODULE_DESCRIPTION("Nintendo 3DS MCU HID driver");
++MODULE_AUTHOR("Wolfvak");
++MODULE_LICENSE("GPL");
++MODULE_ALIAS("platform:" DRIVER_NAME);
 diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3ds_mmc.c linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_mmc.c
 --- linux-5.0.3/drivers/platform/nintendo3ds/nintendo3ds_mmc.c	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_mmc.c	2019-03-21 15:57:02.292828200 -0300
++++ linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_mmc.c	2019-05-04 18:53:35.969234800 -0300
 @@ -0,0 +1,387 @@
 +/*
 + * nintendo3ds_mmc.c
@@ -5600,7 +5842,7 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3d
 +MODULE_ALIAS("platform:" DRIVER_NAME);
 diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3ds_pxi.c linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_pxi.c
 --- linux-5.0.3/drivers/platform/nintendo3ds/nintendo3ds_pxi.c	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_pxi.c	2019-03-21 15:55:23.311967100 -0300
++++ linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_pxi.c	2019-05-04 18:53:35.970242800 -0300
 @@ -0,0 +1,564 @@
 +/*
 + *  nintendo3ds_pxi.c
@@ -6168,8 +6410,8 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3d
 +module_platform_driver(nintendo3ds_pxi_driver);
 diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3ds_reset.c linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_reset.c
 --- linux-5.0.3/drivers/platform/nintendo3ds/nintendo3ds_reset.c	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_reset.c	2019-03-20 18:41:35.728454300 -0300
-@@ -0,0 +1,70 @@
++++ linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_reset.c	2019-05-09 19:36:03.099457400 -0300
+@@ -0,0 +1,68 @@
 +/*
 + *  nintendo3ds_reset.c
 + *
@@ -6185,18 +6427,17 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3d
 +#include <linux/pm.h>
 +#include <linux/reboot.h>
 +#include <linux/module.h>
++#include <linux/regmap.h>
 +#include <linux/platform_device.h>
-+#include <linux/mfd/nintendo3ds-mcu.h>
 +
 +#define DRIVER_NAME "nintendo3ds-reset"
 +#define POWER_REGISTER	0x20
 +
-+static struct nintendo3ds_mcu_dev *mcu_dev;
++static struct regmap *mcu_regmap;
 +static int reset_restart(struct notifier_block *nb, unsigned long act,
 +			   void *data)
 +{
-+	u8 val = 1 << 2;
-+	mcu_dev->write_device(mcu_dev, POWER_REGISTER, sizeof(val), &val);
++	regmap_write(mcu_regmap, POWER_REGISTER, 0x04);
 +	return NOTIFY_DONE;
 +}
 +
@@ -6207,13 +6448,12 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3d
 +
 +static void reset_poweroff(void)
 +{
-+	u8 val = 1 << 0;
-+	mcu_dev->write_device(mcu_dev, POWER_REGISTER, sizeof(val), &val);
++	regmap_write(mcu_regmap, POWER_REGISTER, 0x01);
 +}
 +
 +static int nintendo3ds_reset_probe(struct platform_device *pdev)
 +{
-+	mcu_dev = dev_get_drvdata(pdev->dev.parent);
++	mcu_regmap = dev_get_drvdata(pdev->dev.parent);
 +
 +	register_restart_handler(&restart_nb);
 +	pm_power_off = reset_poweroff;
@@ -6242,7 +6482,7 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3d
 +MODULE_LICENSE("GPL");
 diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3ds_rng.c linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_rng.c
 --- linux-5.0.3/drivers/platform/nintendo3ds/nintendo3ds_rng.c	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_rng.c	2019-03-20 18:41:35.730481600 -0300
++++ linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_rng.c	2019-05-11 23:34:58.673594200 -0300
 @@ -0,0 +1,121 @@
 +/*
 + * nintendo3ds_rng - Random Number Generator driver for the Nintendo 3DS
@@ -6325,7 +6565,7 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3d
 +	rng->dev = &pdev->dev;
 +	rng->chan = chan;
 +
-+	rng->rng.name = "nintendo3ds";
++	rng->rng.name = DRIVER_NAME;
 +	rng->rng.read = nintendo3ds_rng_read;
 +
 +	err = devm_hwrng_register(&pdev->dev, &rng->rng);
@@ -6367,8 +6607,8 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3d
 +MODULE_ALIAS("platform:" DRIVER_NAME);
 diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3ds_rtc.c linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_rtc.c
 --- linux-5.0.3/drivers/platform/nintendo3ds/nintendo3ds_rtc.c	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_rtc.c	2019-03-26 11:46:12.980887200 -0300
-@@ -0,0 +1,118 @@
++++ linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_rtc.c	2019-05-07 12:38:39.730081200 -0300
+@@ -0,0 +1,115 @@
 +/*
 + *  nintendo3ds_rtc.c
 + *
@@ -6385,25 +6625,28 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3d
 +#include <linux/bcd.h>
 +#include <linux/kernel.h>
 +#include <linux/module.h>
++#include <linux/regmap.h>
 +#include <linux/platform_device.h>
-+#include <linux/mfd/nintendo3ds-mcu.h>
 +
 +#define DRIVER_NAME "nintendo3ds-rtc"
 +
 +#define RTC_REGISTER	0x30
 +
 +struct nintendo3ds_rtc {
-+	struct nintendo3ds_mcu_dev *mcu;
++	struct regmap *mcu_regmap;
 +	struct rtc_device *rtc_dev;
 +};
 +
 +static int nintendo3ds_rtc_get_time(struct device *dev, struct rtc_time *tm)
 +{
 +	struct nintendo3ds_rtc *n3ds_rtc = dev_get_drvdata(dev);
-+	struct nintendo3ds_mcu_dev *mcu = n3ds_rtc->mcu;
++	struct regmap *mcu_regmap = n3ds_rtc->mcu_regmap;
++	int error;
 +	u8 buf[8];
 +
-+	mcu->read_device(mcu, RTC_REGISTER, sizeof(buf), buf);
++	error = regmap_raw_read(mcu_regmap, RTC_REGISTER, buf, sizeof(buf));
++	if (error)
++		return error;
 +
 +	tm->tm_sec	= bcd2bin(buf[0]) % 60;
 +	tm->tm_min	= bcd2bin(buf[1]) % 60;
@@ -6411,14 +6654,13 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3d
 +	tm->tm_mday	= bcd2bin(buf[4]) % 32;
 +	tm->tm_mon	= (bcd2bin(buf[5]) - 1) % 12;
 +	tm->tm_year	= bcd2bin(buf[6]) + 100;
-+
 +	return 0;
 +}
 +
 +static int nintendo3ds_rtc_set_time(struct device *dev, struct rtc_time *tm)
 +{
 +	struct nintendo3ds_rtc *n3ds_rtc = dev_get_drvdata(dev);
-+	struct nintendo3ds_mcu_dev *mcu = n3ds_rtc->mcu;
++	struct regmap *mcu_regmap = n3ds_rtc->mcu_regmap;
 +	u8 buf[8];
 +
 +	buf[0] = bin2bcd(tm->tm_sec);
@@ -6428,8 +6670,7 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3d
 +	buf[5] = bin2bcd(tm->tm_mon + 1);
 +	buf[6] = bin2bcd(tm->tm_year - 100);
 +
-+	mcu->write_device(mcu, RTC_REGISTER, sizeof(buf), buf);
-+	return 0;
++	return regmap_raw_write(mcu_regmap, RTC_REGISTER, buf, sizeof(buf));
 +}
 +
 +static const struct rtc_class_ops nintendo3ds_rtc_ops = {
@@ -6441,31 +6682,27 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3d
 +{
 +	struct rtc_device *rtc;
 +	struct nintendo3ds_rtc *n3ds_rtc;
-+	struct nintendo3ds_mcu_dev *mcu_dev = dev_get_drvdata(pdev->dev.parent);
++	struct regmap *mcu_regmap = dev_get_drvdata(pdev->dev.parent);
 +
 +	n3ds_rtc = devm_kzalloc(&pdev->dev, sizeof(*n3ds_rtc), GFP_KERNEL);
-+	if (IS_ERR(n3ds_rtc)) {
-+		dev_err(&pdev->dev, "failed to allocate driver");
++	if (IS_ERR(n3ds_rtc))
 +		return PTR_ERR(n3ds_rtc);
-+	}
++
++	n3ds_rtc->mcu_regmap = mcu_regmap;
 +
 +	platform_set_drvdata(pdev, n3ds_rtc);
-+
-+	n3ds_rtc->mcu = mcu_dev;
 +
 +	rtc = devm_rtc_device_register(&pdev->dev, DRIVER_NAME,
 +		&nintendo3ds_rtc_ops, THIS_MODULE);
 +
-+	if (IS_ERR(rtc)) {
-+		dev_err(&pdev->dev, "failed to register RTC device");
++	if (IS_ERR(rtc))
 +		return PTR_ERR(rtc);
-+	}
 +
 +	n3ds_rtc->rtc_dev = rtc;
 +	return 0;
 +}
 +
-+static int nintendo3ds_rtc_remove(struct platform_device *pdev)
++static int __exit nintendo3ds_rtc_remove(struct platform_device *pdev)
 +{
 +	return 0;
 +}
@@ -6489,8 +6726,8 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3d
 +module_platform_driver(nintendo3ds_rtc_driver);
 diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3ds_spi.c linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_spi.c
 --- linux-5.0.3/drivers/platform/nintendo3ds/nintendo3ds_spi.c	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_spi.c	2019-03-20 18:41:35.733440800 -0300
-@@ -0,0 +1,345 @@
++++ linux-3ds/drivers/platform/nintendo3ds/nintendo3ds_spi.c	2019-05-08 11:05:25.692962000 -0300
+@@ -0,0 +1,325 @@
 +/*
 + *  nintendo3ds_spi.c
 + *
@@ -6622,26 +6859,6 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3d
 +		return 0;
 +	}
 +}
-+
-+/* Not needed for now
-+static u32 spi_get_ns_delay_for_baudrate(u8 baudrate)
-+{
-+	switch (baudrate) {
-+	default:
-+	case 0:
-+		return 0x83400;
-+	case 1:
-+		return 0x41A00;
-+	case 2:
-+		return 0x20D00;
-+	case 3:
-+		return 0x10680;
-+	case 4:
-+		return 0x8340;
-+	case 5:
-+		return 0x41A0;
-+	}
-+}*/
 +
 +struct nintendo3ds_spi_msg {
 +	u32 baudrate;
@@ -6836,40 +7053,9 @@ diff -Naur '--exclude=certs' linux-5.0.3/drivers/platform/nintendo3ds/nintendo3d
 +MODULE_AUTHOR("Sergi Granell <xerpi.g.12@gmail.com>");
 +MODULE_DESCRIPTION("Nintendo 3DS SPI driver");
 +MODULE_LICENSE("GPL");
-diff -Naur '--exclude=certs' linux-5.0.3/include/linux/mfd/nintendo3ds-mcu.h linux-3ds/include/linux/mfd/nintendo3ds-mcu.h
---- linux-5.0.3/include/linux/mfd/nintendo3ds-mcu.h	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/include/linux/mfd/nintendo3ds-mcu.h	2019-03-20 18:41:35.733440800 -0300
-@@ -0,0 +1,27 @@
-+/*
-+ * Functions to access Nintendo 3DS MCU chip.
-+ *
-+ * Copyright (C) 2016 Sergi Granell <xerpi.g.12@gmail.com>
-+ *
-+ * This program is free software; you can redistribute it and/or modify
-+ * it under the terms of the GNU General Public License version 2 as
-+ * published by the Free Software Foundation.
-+ */
-+
-+#ifndef __LINUX_MFD_NINTENDO3DS_MCU_H
-+#define __LINUX_MFD_NINTENDO3DS_MCU_H
-+
-+#include <linux/mutex.h>
-+#include <linux/mfd/core.h>
-+#include <linux/pm.h>
-+
-+struct nintendo3ds_mcu_dev {
-+	struct device *dev;
-+	struct i2c_client *i2c_client;
-+	int (*read_device)(struct nintendo3ds_mcu_dev *mcu, char reg, int size,
-+			void *dest);
-+	int (*write_device)(struct nintendo3ds_mcu_dev *mcu, char reg, int size,
-+			 void *src);
-+};
-+
-+#endif
 diff -Naur '--exclude=certs' linux-5.0.3/make_3ds.sh linux-3ds/make_3ds.sh
 --- linux-5.0.3/make_3ds.sh	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/make_3ds.sh	2019-03-20 18:41:35.734437500 -0300
++++ linux-3ds/make_3ds.sh	2019-05-04 18:53:35.984195600 -0300
 @@ -0,0 +1,7 @@
 +#!/bin/sh
 +
@@ -6880,8 +7066,8 @@ diff -Naur '--exclude=certs' linux-5.0.3/make_3ds.sh linux-3ds/make_3ds.sh
 +echo "Output DTB: ./arch/arm/boot/dts/nintendo3ds_ctr.dtb"
 diff -Naur '--exclude=certs' linux-5.0.3/scripts/dtc/include-prefixes/arm/nintendo3ds_ctr.dts linux-3ds/scripts/dtc/include-prefixes/arm/nintendo3ds_ctr.dts
 --- linux-5.0.3/scripts/dtc/include-prefixes/arm/nintendo3ds_ctr.dts	1969-12-31 21:00:00.000000000 -0300
-+++ linux-3ds/scripts/dtc/include-prefixes/arm/nintendo3ds_ctr.dts	2019-03-20 18:41:35.694544300 -0300
-@@ -0,0 +1,237 @@
++++ linux-3ds/scripts/dtc/include-prefixes/arm/nintendo3ds_ctr.dts	2019-05-11 23:01:14.824711700 -0300
+@@ -0,0 +1,244 @@
 +/dts-v1/;
 +#include <dt-bindings/interrupt-controller/arm-gic.h>
 +
@@ -6990,6 +7176,13 @@ diff -Naur '--exclude=certs' linux-5.0.3/scripts/dtc/include-prefixes/arm/ninten
 +				compatible = "nintendo3ds,nintendo3ds-mcu";
 +				reg = <0x4A>;
 +
++				mcuhid {
++					interrupt-parent = <&gic>;
++
++					compatible = "nintendo3ds,nintendo3ds-mcuhid";
++					interrupts = <GIC_SPI 0x51 IRQ_TYPE_EDGE_RISING>;
++				};
++
 +				charger {
 +					compatible = "nintendo3ds,nintendo3ds-charger";
 +				};
@@ -6998,13 +7191,14 @@ diff -Naur '--exclude=certs' linux-5.0.3/scripts/dtc/include-prefixes/arm/ninten
 +					compatible = "nintendo3ds,nintendo3ds-reset";
 +				};
 +
-+				infoled {
-+					compatible = "nintendo3ds,nintendo3ds-infoled";
++				leds {
++					compatible = "nintendo3ds,nintendo3ds-leds";
 +				};
 +
 +				rtc {
 +					compatible = "nintendo3ds,nintendo3ds-rtc";
 +				};
++
 +			};
 +		};
 +
@@ -7022,9 +7216,13 @@ diff -Naur '--exclude=certs' linux-5.0.3/scripts/dtc/include-prefixes/arm/ninten
 +
 +			compatible = "nintendo3ds,nintendo3ds-spi";
 +			reg = <0x10160000 0x1000>;
-+			interrupts =
-+				<GIC_SPI 0x56 IRQ_TYPE_EDGE_RISING>,
-+				<GIC_SPI 0x57 IRQ_TYPE_EDGE_RISING>;
++
++			flash: nvram@1 {
++				compatible = "jedec,spi-nor";
++				reg = <1>;
++
++				spi-max-frequency = <256000>;
++			};
 +		};
 +
 +		spi1: spi@10142000 {
@@ -7033,9 +7231,6 @@ diff -Naur '--exclude=certs' linux-5.0.3/scripts/dtc/include-prefixes/arm/ninten
 +
 +			compatible = "nintendo3ds,nintendo3ds-spi";
 +			reg = <0x10142000 0x1000>;
-+			interrupts =
-+				<GIC_SPI 0x56 IRQ_TYPE_EDGE_RISING>,
-+				<GIC_SPI 0x57 IRQ_TYPE_EDGE_RISING>;
 +
 +			ts: codec@3 {
 +				compatible = "nintendo3ds,nintendo3ds-codec";
@@ -7052,11 +7247,9 @@ diff -Naur '--exclude=certs' linux-5.0.3/scripts/dtc/include-prefixes/arm/ninten
 +		spi2: spi@10143000 {
 +			#address-cells = <1>;
 +			#size-cells = <0>;
++
 +			compatible = "nintendo3ds,nintendo3ds-spi";
 +			reg = <0x10143000 0x1000>;
-+			interrupts =
-+				<GIC_SPI 0x56 IRQ_TYPE_EDGE_RISING>,
-+				<GIC_SPI 0x57 IRQ_TYPE_EDGE_RISING>;
 +		};
 +
 +		refclk: refclk134mkhz {
@@ -7084,8 +7277,8 @@ diff -Naur '--exclude=certs' linux-5.0.3/scripts/dtc/include-prefixes/arm/ninten
 +			#interrupt-cells = <3>;
 +			#address-cells = <1>;
 +			interrupt-controller;
-+			reg = <0x17E01000 0x1000>, //GIC distributor register
-+			      <0x17E00100 0x100>;  //GIC cpu interface register
++			reg = <0x17E01000 0x1000>,
++			      <0x17E00100 0x100>;
 +		};
 +
 +		scu: scu@17E00000 {
